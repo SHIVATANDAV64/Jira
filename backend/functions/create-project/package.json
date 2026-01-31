@@ -1,0 +1,8 @@
+{
+  "name": "create-project",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "node-appwrite": "^14.0.0"
+  }
+}

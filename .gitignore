@@ -1,0 +1,21 @@
+temp
+.opencode
+nul*
+dist-node
+# Environment variables (local configurations)
+.env
+.env.local
+.env.*.local
+
+# Node modules and build outputs
+node_modules/
+dist/
+dist-node/
+*.log
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
