@@ -105,6 +105,7 @@ function ActivityItem({ activity, showProject }: ActivityItemProps) {
       <Avatar
         userId={activity.userId}
         name={activity.user?.name || 'User'}
+        avatarId={activity.user?.avatar || activity.user?.prefs?.avatar}
         size="sm"
       />
 

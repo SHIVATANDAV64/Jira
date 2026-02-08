@@ -18,12 +18,13 @@ async function enrichActivities(activities: ActivityLog[]): Promise<ActivityLog[
     );
 
     const userMap = new Map();
-    for (const doc of members.documents) {
+    for (const doc of (members.documents as any)) {
       if (!userMap.has(doc.userId)) {
         userMap.set(doc.userId, {
           $id: doc.userId,
           name: doc.userName,
           email: doc.userEmail,
+          avatar: doc.userAvatar,
           $createdAt: doc.$createdAt,
           $updatedAt: doc.$updatedAt,
         });

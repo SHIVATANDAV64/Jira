@@ -193,9 +193,10 @@ export default async function main({ req, res, log, error: logError }) {
           $id: userResults[i].$id,
           name: userResults[i].name,
           email: userResults[i].email,
+          prefs: userResults[i].prefs,
         });
       } else {
-        userMap.set(uid, { $id: uid, name: 'Unknown', email: '' });
+        userMap.set(uid, { $id: uid, name: 'Unknown', email: '', prefs: {} });
       }
     });
 

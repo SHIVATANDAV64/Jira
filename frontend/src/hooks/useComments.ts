@@ -103,20 +103,14 @@ export function useComments(ticketId: string | undefined) {
 
 // Mutation hooks
 export function useCreateComment(
-  ticketId: string | undefined,
-  ticketContext?: {
-    reporterId: string;
-    projectId: string;
-    ticketKey: string;
-    ticketTitle: string;
-  }
+  ticketId: string | undefined
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
       if (!ticketId) throw new Error('Ticket ID is required');
-      const response = await commentService.createComment(ticketId, content, parentId, ticketContext);
+      const response = await commentService.createComment(ticketId, content, parentId);
       if (!response.success) {
         throw new Error(response.error || 'Failed to create comment');
       }

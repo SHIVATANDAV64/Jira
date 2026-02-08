@@ -170,7 +170,12 @@ function MemberRow({ member, projectId, currentUserId, isAdmin, currentUserRole 
   return (
     <div className="flex items-center justify-between p-4 hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors">
       <div className="flex items-center gap-3">
-        <Avatar name={member.user?.name || 'User'} size="md" />
+        <Avatar 
+          userId={member.userId} 
+          name={member.user?.name || member.userName || 'User'} 
+          avatarId={member.userAvatar || member.user?.avatar || member.user?.prefs?.avatar} 
+          size="md" 
+        />
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium text-[var(--color-text-primary)]">

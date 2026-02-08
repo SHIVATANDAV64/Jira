@@ -4,6 +4,10 @@ export interface User {
   email: string;
   name: string;
   avatar?: string;
+  prefs?: {
+    avatar?: string;
+    [key: string]: any;
+  };
   $createdAt: string;
   $updatedAt: string;
 }
@@ -29,6 +33,9 @@ export interface ProjectMember {
   $id: string;
   projectId: string;
   userId: string;
+  userName?: string;
+  userEmail?: string;
+  userAvatar?: string;
   role: ProjectRole;
   user?: User;
   $createdAt: string;

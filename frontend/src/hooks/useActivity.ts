@@ -236,7 +236,7 @@ export function formatActivityAction(activity: ActivityLog): string {
     case 'ticket_deleted':
       return `deleted ticket "${details.title || 'Unknown'}"`;
     case 'ticket_moved':
-      return `moved ticket from ${details.fromStatus || 'Unknown'} to ${details.toStatus || 'Unknown'}`;
+      return `moved ticket from ${details.from || details.fromStatus || 'Unknown'} to ${details.to || details.toStatus || 'Unknown'}`;
     case 'ticket_assigned':
       return details.assigneeName
         ? `assigned ticket to ${details.assigneeName}`

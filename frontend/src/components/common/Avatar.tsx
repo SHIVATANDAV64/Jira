@@ -41,21 +41,23 @@ export function Avatar({ userId, name, avatarId, size = 'md', className, showSta
   return (
     <div
       className={clsx(
-        'relative flex items-center justify-center rounded-full font-medium text-white overflow-hidden',
+        'relative flex items-center justify-center rounded-full font-medium text-white shrink-0 overflow-hidden',
         'bg-[var(--color-primary-600)]',
         sizeStyles[size],
         className
       )}
     >
       <span className="drop-shadow-sm font-medium">{initials}</span>
-      <img
-        src={getAvatarUrl(userId || '', name, avatarId)}
-        alt={name}
-        className="absolute inset-0 h-full w-full object-cover"
-        onError={(e) => {
-          e.currentTarget.style.display = 'none';
-        }}
-      />
+      {avatarId && (
+        <img
+          src={getAvatarUrl(userId || '', name, avatarId)}
+          alt={name}
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      )}
       
       {/* Status indicator */}
       {showStatus && (
@@ -73,7 +75,7 @@ export function Avatar({ userId, name, avatarId, size = 'md', className, showSta
 }
 
 interface AvatarGroupProps {
-  users: Array<{ $id: string; name: string }>;
+  users: Array<{ $id: string; name: string; avatar?: string; prefs?: { avatar?: string } }>;
   max?: number;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -89,6 +91,7 @@ export function AvatarGroup({ users, max = 3, size = 'sm' }: AvatarGroupProps) {
           key={user.$id}
           userId={user.$id}
           name={user.name}
+          avatarId={user.avatar || user.prefs?.avatar}
           size={size}
           className="ring-2 ring-[var(--color-bg-primary)]"
         />

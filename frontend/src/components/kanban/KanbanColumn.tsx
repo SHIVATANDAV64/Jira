@@ -17,7 +17,7 @@ export function KanbanColumn({ id, title, ticketCount, children }: KanbanColumnP
     <div
       ref={setNodeRef}
       className={clsx(
-        'flex-shrink-0 w-72 rounded-lg bg-[var(--color-bg-tertiary)] transition-colors',
+        'w-full rounded-lg bg-[var(--color-bg-tertiary)] transition-colors',
         isOver
           ? 'ring-2 ring-[var(--color-primary-500)]'
           : ''

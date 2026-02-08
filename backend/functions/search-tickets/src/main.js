@@ -128,9 +128,22 @@ export default async function main({ req, res, log, error: logError }) {
       Query.limit(safeLimit),
     ];
 
-    // Apply text search (will search in title)
+    // Apply text search (search in title or ticket number)
     if (sanitizedQuery) {
-      queries.push(Query.search('title', sanitizedQuery));
+      const ticketNumber = parseInt(sanitizedQuery);
+      if (!isNaN(ticketNumber)) {
+        // If query is a number, search in title OR ticketNumber
+        // Note: Query.or requires Appwrite 1.5+
+        queries.push(
+          Query.or([
+            Query.search('title', sanitizedQuery),
+            Query.equal('ticketNumber', ticketNumber)
+          ])
+        );
+      } else {
+        // Otherwise search only in title
+        queries.push(Query.search('title', sanitizedQuery));
+      }
     }
 
     // Apply filters with validation

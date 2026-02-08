@@ -56,17 +56,7 @@ export function TicketDetail() {
   const updateTicketMutation = useUpdateTicket();
   const assignTicketMutation = useAssignTicket();
   // NTF-01c: Pass ticket context for comment notifications
-  const createCommentMutation = useCreateComment(
-    ticketId,
-    ticket
-      ? {
-          reporterId: ticket.reporterId,
-          projectId: ticket.projectId,
-          ticketKey: ticket.ticketKey || `${ticket.$id}-${ticket.ticketNumber}`,
-          ticketTitle: ticket.title,
-        }
-      : undefined
-  );
+  const createCommentMutation = useCreateComment(ticketId);
   const deleteCommentMutation = useDeleteComment(ticketId);
 
   const isLoading = isLoadingTicket || isLoadingComments;
@@ -271,6 +261,7 @@ export function TicketDetail() {
                       <Avatar
                         userId={comment.user.$id}
                         name={comment.user.name}
+                        avatarId={comment.user.avatar || comment.user.prefs?.avatar}
                         size="md"
                       />
                     )}
@@ -315,6 +306,7 @@ export function TicketDetail() {
                                 <Avatar
                                   userId={reply.user.$id}
                                   name={reply.user.name}
+                                  avatarId={reply.user.avatar || reply.user.prefs?.avatar}
                                   size="sm"
                                 />
                               )}
@@ -383,6 +375,7 @@ export function TicketDetail() {
                       <Avatar
                         userId={ticket.assignee.$id}
                         name={ticket.assignee.name}
+                        avatarId={ticket.assignee.avatar || ticket.assignee.prefs?.avatar}
                         size="sm"
                       />
                       <span className="text-[var(--color-text-primary)]">

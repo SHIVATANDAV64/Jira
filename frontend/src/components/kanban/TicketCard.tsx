@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link, useNavigate } from 'react-router-dom';
@@ -43,8 +44,10 @@ export function TicketCard({
 }: TicketCardProps) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [statusSubmenuOpen, setStatusSubmenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const {
     attributes,
     listeners,
@@ -65,19 +68,46 @@ export function TicketCard({
   useEffect(() => {
     if (!menuOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        menuRef.current && 
+        !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
         setMenuOpen(false);
         setStatusSubmenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    // Also update position on scroll to prevent detachment (simple close is better for performance)
+    const handleScroll = () => {
+        if(menuOpen) setMenuOpen(false);
+    };
+    window.addEventListener('scroll', handleScroll, true); 
+    
+    return () => {
+        document.removeEventListener('mousedown', handleClick);
+        window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [menuOpen]);
 
   const handleMenuClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setMenuOpen(!menuOpen);
+    
+    if (menuOpen) {
+        setMenuOpen(false);
+        return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    // Position: Bottom-Right aligned to the trigger
+    // 192px is w-48
+    setMenuPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.right + window.scrollX - 192 + (rect.width > 20 ? 0 : 0) // Align right edge
+    });
+    setMenuOpen(true);
     setStatusSubmenuOpen(false);
   };
 
@@ -126,8 +156,9 @@ export function TicketCard({
           <TypeBadge type={ticket.type} />
           {/* 3-dot context menu */}
           {showContextMenu && (
-            <div className="relative" ref={menuRef}>
+            <div className="relative">
               <button
+                ref={triggerRef}
                 onClick={handleMenuClick}
                 className={clsx(
                   'p-1 rounded-md transition-all cursor-pointer',
@@ -140,8 +171,17 @@ export function TicketCard({
                 <MoreHorizontal className="h-4 w-4" />
               </button>
 
-              {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-lg py-1">
+              {menuOpen && menuPosition && createPortal(
+                <div 
+                    ref={menuRef}
+                    style={{ 
+                        position: 'absolute',
+                        top: menuPosition.top,
+                        left: menuPosition.left,
+                        zIndex: 9999
+                    }}
+                    className="w-48 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-lg py-1"
+                >
                   {/* Open in new view */}
                   <button
                     onClick={(e) => handleAction(e, () => navigate(`tickets/${ticket.$id}`))}
@@ -236,7 +276,8 @@ export function TicketCard({
                       Delete ticket
                     </button>
                   )}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
           )}
@@ -293,6 +334,7 @@ export function TicketCard({
             <Avatar
               userId={ticket.assignee.$id}
               name={ticket.assignee.name}
+              avatarId={ticket.assignee.avatar || ticket.assignee.prefs?.avatar}
               size="sm"
             />
           )}

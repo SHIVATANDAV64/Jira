@@ -262,9 +262,14 @@ export default async function main({ req, res, log, error: logError }) {
         for (const uid of userIds) {
           try {
             const user = await users.get(uid);
-            userMap.set(uid, { $id: user.$id, name: user.name, email: user.email });
+            userMap.set(uid, { 
+              $id: user.$id, 
+              name: user.name, 
+              email: user.email,
+              prefs: user.prefs 
+            });
           } catch (e) {
-            userMap.set(uid, { $id: uid, name: 'Unknown', email: '' });
+            userMap.set(uid, { $id: uid, name: 'Unknown', email: '', prefs: {} });
           }
         }
 

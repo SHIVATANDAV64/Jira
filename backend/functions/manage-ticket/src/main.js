@@ -225,18 +225,28 @@ export default async function main({ req, res, log, error: logError }) {
         if (ticket.reporterId) {
           try {
             const user = await users.get(ticket.reporterId);
-            reporter = { $id: user.$id, name: user.name, email: user.email };
+            reporter = { 
+              $id: user.$id, 
+              name: user.name, 
+              email: user.email,
+              prefs: user.prefs 
+            };
           } catch (e) {
-            reporter = { $id: ticket.reporterId, name: 'Unknown', email: '' };
+            reporter = { $id: ticket.reporterId, name: 'Unknown', email: '', prefs: {} };
           }
         }
 
         if (ticket.assigneeId) {
           try {
             const user = await users.get(ticket.assigneeId);
-            assignee = { $id: user.$id, name: user.name, email: user.email };
+            assignee = { 
+              $id: user.$id, 
+              name: user.name, 
+              email: user.email,
+              prefs: user.prefs 
+            };
           } catch (e) {
-            assignee = { $id: ticket.assigneeId, name: 'Unknown', email: '' };
+            assignee = { $id: ticket.assigneeId, name: 'Unknown', email: '', prefs: {} };
           }
         }
 

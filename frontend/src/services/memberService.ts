@@ -1,6 +1,6 @@
-import { functions, FUNCTIONS_IDS } from '@/lib/appwrite';
+import { functions, FUNCTIONS_IDS, databases, DATABASE_ID, COLLECTIONS } from '@/lib/appwrite';
 import type { ProjectMember, ProjectRole, ApiResponse, PaginatedResponse } from '@/types';
-import { ExecutionMethod } from 'appwrite';
+import { ExecutionMethod, Query } from 'appwrite';
 
 /**
  * Execute an Appwrite function and parse the response
@@ -97,4 +97,27 @@ export async function leaveProject(projectId: string): Promise<ApiResponse<void>
     action: 'leave',
     projectId,
   });
+}
+
+/**
+ * Update the userAvatar field for all project memberships of a user
+ */
+export async function updateUserAvatarInMemberships(userId: string, avatarId: string): Promise<void> {
+  try {
+    const memberships = await databases.listDocuments(
+      DATABASE_ID,
+      COLLECTIONS.PROJECT_MEMBERS,
+      [Query.equal('userId', userId), Query.limit(100)]
+    );
+
+    await Promise.all(
+      memberships.documents.map((doc) =>
+        databases.updateDocument(DATABASE_ID, COLLECTIONS.PROJECT_MEMBERS, doc.$id, {
+          userAvatar: avatarId,
+        })
+      )
+    );
+  } catch (error) {
+    console.error('Failed to sync avatar with memberships:', error);
+  }
 }

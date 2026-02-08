@@ -305,6 +305,7 @@ export default async function main({ req, res, log, error: logError }) {
         userId: inviteeId,
         userEmail: email,
         userName: invitee.name || email,
+        userAvatar: invitee.prefs?.avatar || '',
         joinedAt: new Date().toISOString(),
         role,
       }

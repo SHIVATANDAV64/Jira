@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { account, storage, BUCKETS } from '@/lib/appwrite';
+import { updateUserAvatarInMemberships } from '@/services/memberService';
 import { ID, Permission, Role } from 'appwrite';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
@@ -132,7 +133,10 @@ export function SettingsPage() {
       const prefs = await account.getPrefs();
       await account.updatePrefs({ ...prefs, avatar: fileUpload.$id });
 
-      // 3. Refresh user
+      // 3. Sync avatar with project memberships for activity logs
+      await updateUserAvatarInMemberships(user.$id, fileUpload.$id);
+
+      // 4. Refresh user
       await refreshUser();
       
       toast.success('Avatar updated successfully');

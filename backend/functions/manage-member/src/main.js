@@ -254,9 +254,14 @@ export default async function main({ req, res, log, error: logError }) {
             let user = null;
             try {
               const userDoc = await users.get(member.userId);
-              user = { $id: userDoc.$id, name: userDoc.name, email: userDoc.email };
+              user = { 
+                $id: userDoc.$id, 
+                name: userDoc.name, 
+                email: userDoc.email,
+                prefs: userDoc.prefs 
+              };
             } catch (e) {
-              user = { $id: member.userId, name: 'Unknown', email: '' };
+              user = { $id: member.userId, name: 'Unknown', email: '', prefs: {} };
             }
             return { ...member, user };
           })

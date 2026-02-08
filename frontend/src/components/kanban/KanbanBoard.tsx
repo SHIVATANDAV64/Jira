@@ -135,7 +135,7 @@ export function KanbanBoard({ tickets, projectKey, onTicketMove, onTicketEdit, o
           <p className="text-[var(--color-text-muted)] text-xs mt-1">Try adjusting or clearing your filters.</p>
         </div>
       )}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-4">
         {columns.map((column) => {
           const hasTickets = column.tickets.length > 0;
           return (

@@ -208,6 +208,7 @@ export default async function main({ req, res, log, error: logError }) {
         userId: userId,
         userEmail: user.email,
         userName: user.name || user.email,
+        userAvatar: user.prefs?.avatar || '',
         joinedAt: new Date().toISOString(),
         role: PROJECT_ROLES.ADMIN,
       }
