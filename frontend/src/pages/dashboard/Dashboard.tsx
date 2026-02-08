@@ -67,13 +67,13 @@ function StatCard({ title, value, icon, trend, isLoading }: StatCardProps) {
             </p>
           )}
           {trend && !isLoading && (
-            <p className="mt-1 flex items-center gap-1 text-sm text-green-400">
+            <p className="mt-1 flex items-center gap-1 text-sm text-green-600">
               <TrendingUp className="h-4 w-4" />
               {trend}
             </p>
           )}
         </div>
-        <div className="rounded-lg bg-gradient-to-br from-[--color-primary-500]/20 to-[--color-primary-700]/20 p-3 text-[--color-primary-400]">
+        <div className="rounded-lg bg-[--color-primary-500]/10 p-3 text-[--color-primary-600]">
           {icon}
         </div>
       </div>
@@ -91,7 +91,7 @@ function ProjectCard({ project }: ProjectCardProps) {
       to={`/projects/${project.$id}`}
       className="flex items-center gap-3 p-3 rounded-lg hover:bg-[--color-bg-hover] transition-all duration-200 hover:translate-x-0.5"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[--color-primary-500]/20 to-[--color-primary-700]/20 text-[--color-primary-400] font-bold text-sm">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[--color-primary-500]/10 text-[--color-primary-600] font-bold text-sm">
         {project.key}
       </div>
       <div className="flex-1 min-w-0">
@@ -121,10 +121,10 @@ function AssignedTicketCard({ ticket, projects }: AssignedTicketCardProps) {
   const project = projects.find((p) => p.$id === ticket.projectId);
   
   const priorityColors: Record<string, string> = {
-    critical: 'bg-red-500/20 text-red-400',
-    high: 'bg-orange-500/20 text-orange-400',
-    medium: 'bg-yellow-500/20 text-yellow-400',
-    low: 'bg-blue-500/20 text-blue-400',
+    critical: 'bg-red-50 text-red-700',
+    high: 'bg-orange-50 text-orange-700',
+    medium: 'bg-amber-50 text-amber-700',
+    low: 'bg-blue-50 text-blue-700',
   };
 
   return (
@@ -132,7 +132,7 @@ function AssignedTicketCard({ ticket, projects }: AssignedTicketCardProps) {
       to={`/tickets/${ticket.$id}`}
       className="flex items-center gap-3 p-3 rounded-lg hover:bg-[--color-bg-hover] transition-all duration-200 hover:translate-x-0.5"
     >
-      <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${priorityColors[ticket.priority] || 'bg-gray-500/20 text-gray-400'}`}>
+      <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${priorityColors[ticket.priority] || 'bg-gray-100 text-gray-700'}`}>
         {ticket.priority.charAt(0).toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
@@ -263,7 +263,7 @@ export function Dashboard() {
             </h2>
             <Link
               to="/projects"
-              className="flex items-center gap-1 text-sm text-[--color-primary-400] hover:text-[--color-primary-300]"
+              className="flex items-center gap-1 text-sm text-[--color-primary-500] hover:text-[--color-primary-600]"
             >
               View all <ArrowRight className="h-4 w-4" />
             </Link>

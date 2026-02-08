@@ -91,7 +91,7 @@ export function Login() {
           </p>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
@@ -169,7 +169,7 @@ export function Login() {
             Don't have an account?{' '}
             <Link
               to="/register"
-              className="font-medium text-[--color-primary-500] hover:text-[--color-primary-400]"
+              className="font-medium text-[--color-primary-600] hover:text-[--color-primary-700]"
             >
               Sign up
             </Link>

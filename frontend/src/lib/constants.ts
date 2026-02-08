@@ -23,18 +23,18 @@ export const TICKET_STATUS_ORDER: TicketStatus[] = [
 
 // Ticket Priority Configuration
 export const TICKET_PRIORITIES: Record<TicketPriority, { label: string; color: string; iconName: PriorityIconName }> = {
-  critical: { label: 'Critical', color: 'text-red-500 bg-red-500/10', iconName: 'AlertOctagon' },
-  high: { label: 'High', color: 'text-orange-500 bg-orange-500/10', iconName: 'ChevronUp' },
-  medium: { label: 'Medium', color: 'text-yellow-500 bg-yellow-500/10', iconName: 'Minus' },
-  low: { label: 'Low', color: 'text-green-500 bg-green-500/10', iconName: 'ChevronDown' },
+  critical: { label: 'Critical', color: 'text-red-700 bg-red-50', iconName: 'AlertOctagon' },
+  high: { label: 'High', color: 'text-orange-700 bg-orange-50', iconName: 'ChevronUp' },
+  medium: { label: 'Medium', color: 'text-amber-700 bg-amber-50', iconName: 'Minus' },
+  low: { label: 'Low', color: 'text-green-700 bg-green-50', iconName: 'ChevronDown' },
 };
 
 // Ticket Type Configuration
 export const TICKET_TYPES: Record<TicketType, { label: string; color: string; iconName: TypeIconName }> = {
-  bug: { label: 'Bug', color: 'text-red-400 bg-red-400/10', iconName: 'Bug' },
-  feature: { label: 'Feature', color: 'text-purple-400 bg-purple-400/10', iconName: 'Sparkles' },
-  task: { label: 'Task', color: 'text-blue-400 bg-blue-400/10', iconName: 'ClipboardList' },
-  improvement: { label: 'Improvement', color: 'text-cyan-400 bg-cyan-400/10', iconName: 'Lightbulb' },
+  bug: { label: 'Bug', color: 'text-red-700 bg-red-50', iconName: 'Bug' },
+  feature: { label: 'Feature', color: 'text-violet-700 bg-violet-50', iconName: 'Sparkles' },
+  task: { label: 'Task', color: 'text-blue-700 bg-blue-50', iconName: 'ClipboardList' },
+  improvement: { label: 'Improvement', color: 'text-cyan-700 bg-cyan-50', iconName: 'Lightbulb' },
 };
 
 // Project Role Configuration

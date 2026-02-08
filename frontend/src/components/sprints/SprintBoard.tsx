@@ -310,9 +310,9 @@ function SprintCard({
   const isPlanning = sprint.status === 'planning';
 
   const statusColors = {
-    planning: 'bg-blue-500/20 text-blue-400',
-    active: 'bg-green-500/20 text-green-400',
-    completed: 'bg-gray-500/20 text-gray-400',
+    planning: 'bg-blue-50 text-blue-700',
+    active: 'bg-green-50 text-green-700',
+    completed: 'bg-gray-100 text-gray-700',
   };
 
   return (
@@ -346,7 +346,7 @@ function SprintCard({
                 {format(new Date(sprint.endDate), 'MMM d')}
               </span>
               {isActive && (
-                <span className={daysRemaining < 0 ? 'text-red-400' : ''}>
+                <span className={daysRemaining < 0 ? 'text-red-600' : ''}>
                   {daysRemaining < 0
                     ? `${Math.abs(daysRemaining)} days overdue`
                     : `${daysRemaining} days remaining`}
@@ -405,7 +405,7 @@ function SprintCard({
                     Edit
                   </button>
                   <button
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-[--color-bg-hover]"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-[--color-bg-hover]"
                     onClick={() => {
                       setShowMenu(false);
                       onDelete?.();

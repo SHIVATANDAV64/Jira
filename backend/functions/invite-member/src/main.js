@@ -242,10 +242,12 @@ export default async function main({ req, res, log, error: logError }) {
 
     // Find user by email
     let inviteeId = null;
+    let invitee = null;
     try {
       const usersList = await users.list([Query.equal('email', email)]);
       if (usersList.users.length > 0) {
-        inviteeId = usersList.users[0].$id;
+        invitee = usersList.users[0];
+        inviteeId = invitee.$id;
       }
     } catch (e) {
       log(`Could not find user by email: ${e.message}`);
@@ -301,6 +303,9 @@ export default async function main({ req, res, log, error: logError }) {
       {
         projectId,
         userId: inviteeId,
+        userEmail: email,
+        userName: invitee.name || email,
+        joinedAt: new Date().toISOString(),
         role,
       }
     );

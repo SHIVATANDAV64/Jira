@@ -118,11 +118,11 @@ export function ProjectsList() {
               <Link to={`/projects/${project.$id}`} className="block">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[--color-primary-600]/20 text-[--color-primary-400] font-bold text-sm">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[--color-primary-100] text-[--color-primary-600] font-bold text-sm">
                       {project.key}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-[--color-text-primary] group-hover:text-[--color-primary-400]">
+                      <h3 className="font-semibold text-[--color-text-primary] group-hover:text-[--color-primary-600]">
                         {project.name}
                       </h3>
                       <p className="text-sm text-[--color-text-muted]">

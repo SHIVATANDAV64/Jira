@@ -142,7 +142,7 @@ export function CreateProject() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {createProjectMutation.error && (
-          <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
             {createProjectMutation.error.message}
           </div>
         )}
@@ -157,7 +157,7 @@ export function CreateProject() {
               required
             />
             {errors.name && (
-              <p className="mt-1 text-sm text-red-400">{errors.name}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
             )}
           </div>
 
@@ -172,7 +172,7 @@ export function CreateProject() {
               required
             />
             {errors.key && (
-              <p className="mt-1 text-sm text-red-400">{errors.key}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.key}</p>
             )}
           </div>
 
@@ -185,7 +185,7 @@ export function CreateProject() {
               rows={4}
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-red-400">{errors.description}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.description}</p>
             )}
             <p className="mt-1 text-xs text-[--color-text-muted]">
               {formData.description.length}/2000 characters

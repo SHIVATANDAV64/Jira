@@ -119,7 +119,7 @@ export function SettingsPage() {
               <div className="flex items-start gap-6">
                 <div className="flex flex-col items-center gap-2">
                   <Avatar userId={user?.$id} name={name || 'User'} size="lg" className="h-20 w-20 text-2xl" />
-                  <button className="text-sm text-[--color-primary-400] hover:text-[--color-primary-300] cursor-pointer">
+                  <button className="text-sm text-[--color-primary-600] hover:text-[--color-primary-700] cursor-pointer">
                     Change avatar
                   </button>
                 </div>
@@ -232,8 +232,8 @@ export function SettingsPage() {
                 />
               </div>
               {theme === 'light' && (
-                <p className="mt-4 text-sm text-yellow-400 bg-yellow-400/10 px-3 py-2 rounded-lg">
-                  Light mode is coming soon! Currently only dark mode is available.
+                <p className="mt-4 text-sm text-yellow-700 bg-yellow-50 px-3 py-2 rounded-lg">
+                  Theme preference will be applied on next page load.
                 </p>
               )}
             </div>
@@ -378,10 +378,10 @@ function ThemeOption({ mode, label, icon, selected, onSelect }: ThemeOptionProps
       }`}
     >
       <div className="flex flex-col items-center gap-2">
-        <div className={`${selected ? 'text-[--color-primary-400]' : 'text-[--color-text-muted]'}`}>
+        <div className={`${selected ? 'text-[--color-primary-600]' : 'text-[--color-text-muted]'}`}>
           {icon}
         </div>
-        <span className={`text-sm font-medium ${selected ? 'text-[--color-primary-400]' : 'text-[--color-text-secondary]'}`}>
+        <span className={`text-sm font-medium ${selected ? 'text-[--color-primary-600]' : 'text-[--color-text-secondary]'}`}>
           {label}
         </span>
       </div>
@@ -483,7 +483,7 @@ function SecurityTab({ onLogout }: { onLogout: () => void }) {
                  navigator.userAgent.includes('Linux') ? 'Linux' : 'Unknown OS'}
               </p>
             </div>
-            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
+            <span className="text-xs text-green-700 bg-green-50 px-2 py-1 rounded">
               Active
             </span>
           </div>

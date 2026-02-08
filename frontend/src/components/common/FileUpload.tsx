@@ -349,7 +349,7 @@ function FileItem({ fileId, info, onRemove, compact }: FileItemProps) {
               e.stopPropagation();
               onRemove();
             }}
-            className="text-red-400 hover:text-red-300 p-1.5"
+            className="text-red-600 hover:text-red-700 p-1.5"
             title="Remove"
           >
             <X className="h-4 w-4" />

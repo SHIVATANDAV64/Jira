@@ -204,7 +204,7 @@ export function ProjectDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[--color-primary-600]/20 text-[--color-primary-400] font-bold text-lg">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[--color-primary-100] text-[--color-primary-600] font-bold text-lg">
             {project.key}
           </div>
           <div>
@@ -250,7 +250,7 @@ export function ProjectDetail() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-red-400 hover:text-red-300"
+              className="text-red-600 hover:text-red-700"
               leftIcon={<Trash2 className="h-4 w-4" />}
               onClick={() => setShowDeleteConfirm(true)}
             >
@@ -360,7 +360,7 @@ export function ProjectDetail() {
             </Button>
             <Button
               variant="ghost"
-              className="text-red-400 hover:text-red-300"
+              className="text-red-600 hover:text-red-700"
               onClick={handleDeleteProject}
               isLoading={deleteProjectMutation.isPending}
             >

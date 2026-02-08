@@ -216,7 +216,7 @@ export function CreateTicketModal({
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Labels</label>
+          <label className="block text-sm font-medium text-[--color-text-secondary] mb-2">Labels</label>
           <div className="flex flex-wrap gap-2">
             {DEFAULT_LABELS.map((label) => (
               <button
@@ -225,8 +225,8 @@ export function CreateTicketModal({
                 onClick={() => handleLabelToggle(label)}
                 className={`px-3 py-1 text-xs rounded-full border transition-colors cursor-pointer ${
                   formData.labels?.includes(label)
-                    ? 'bg-primary-600 border-primary-600 text-white'
-                    : 'border-gray-600 text-gray-400 hover:border-gray-500'
+                    ? 'bg-[--color-primary-600] border-[--color-primary-600] text-white'
+                    : 'border-[--color-border-secondary] text-[--color-text-secondary] hover:border-[--color-primary-500]'
                 }`}
               >
                 {label}
@@ -237,7 +237,7 @@ export function CreateTicketModal({
 
         {/* Attachments */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Attachments</label>
+          <label className="block text-sm font-medium text-[--color-text-secondary] mb-2">Attachments</label>
           <FileUpload
             attachments={attachmentIds}
             onChange={setAttachmentIds}
@@ -245,7 +245,7 @@ export function CreateTicketModal({
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[--color-border-primary]">
           <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting} className="cursor-pointer">
             Cancel
           </Button>

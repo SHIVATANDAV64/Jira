@@ -320,6 +320,9 @@ export default async function main({ req, res, log, error: logError }) {
         // Sanitize comment content
         const sanitizedContent = sanitizeString(data.content);
 
+        // Get user info for author fields
+        const commentUser = await users.get(userId);
+
         const comment = await databases.createDocument(
           DATABASE_ID,
           COLLECTIONS.COMMENTS,
@@ -327,6 +330,9 @@ export default async function main({ req, res, log, error: logError }) {
           {
             ticketId,
             userId,
+            authorId: userId,
+            authorName: commentUser.name || commentUser.email || 'Unknown',
+            authorEmail: commentUser.email || null,
             content: sanitizedContent,
             parentId: data.parentId || null,
           }

@@ -39,10 +39,10 @@ interface BadgeProps {
 const variantStyles = {
   default: 'bg-[--color-bg-tertiary] text-[--color-text-secondary]',
   outline: 'border border-[--color-border-primary] text-[--color-text-secondary]',
-  info: 'bg-blue-500/20 text-blue-400',
-  success: 'bg-green-500/20 text-green-400',
-  warning: 'bg-yellow-500/20 text-yellow-400',
-  error: 'bg-red-500/20 text-red-400',
+  info: 'bg-blue-50 text-blue-700',
+  success: 'bg-green-50 text-green-700',
+  warning: 'bg-amber-50 text-amber-700',
+  error: 'bg-red-50 text-red-700',
 };
 
 const sizeStyles = {

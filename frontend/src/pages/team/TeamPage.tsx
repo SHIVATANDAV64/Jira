@@ -229,7 +229,7 @@ function MemberRow({ member, projectId, currentUserId, isAdmin, currentUserRole 
                 <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-lg border border-[--color-border-primary] bg-[--color-bg-secondary] shadow-lg py-1">
                   <button
                     onClick={handleRemove}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-[--color-bg-hover] cursor-pointer"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-[--color-bg-hover] cursor-pointer"
                   >
                     <Trash2 className="h-4 w-4" />
                     Remove from project
@@ -372,7 +372,7 @@ export function TeamPage() {
         <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[--color-primary-600]/20 text-[--color-primary-400] font-bold">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[--color-primary-100] text-[--color-primary-600] font-bold">
                 {selectedProject.key}
               </div>
               <div>
@@ -387,7 +387,7 @@ export function TeamPage() {
             <div className="flex items-center gap-2">
               <Link
                 to={`/projects/${selectedProject.$id}`}
-                className="text-sm text-[--color-primary-400] hover:text-[--color-primary-300]"
+                className="text-sm text-[--color-primary-600] hover:text-[--color-primary-700]"
               >
                 View Project
               </Link>
@@ -459,7 +459,7 @@ export function TeamPage() {
           {Object.entries(PROJECT_ROLES).map(([role, config]) => (
             <div key={role} className="p-3 rounded-lg bg-[--color-bg-tertiary]">
               <div className="flex items-center gap-2 mb-1">
-                <Shield className="h-4 w-4 text-[--color-primary-400]" />
+                <Shield className="h-4 w-4 text-[--color-primary-600]" />
                 <span className="font-medium text-[--color-text-primary]">{config.label}</span>
               </div>
               <p className="text-xs text-[--color-text-muted]">{config.description}</p>
@@ -499,7 +499,7 @@ function LeaveProjectButton({ projectId }: LeaveProjectButtonProps) {
     <Button
       variant="ghost"
       size="sm"
-      className="text-red-400 hover:text-red-300"
+      className="text-red-600 hover:text-red-700"
       onClick={handleLeave}
       isLoading={leaveProject.isPending}
     >

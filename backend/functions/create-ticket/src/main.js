@@ -364,6 +364,8 @@ export default async function main({ req, res, log, error: logError }) {
             labels: body.labels || [],
             dueDate: body.dueDate || null,
             order: nextOrder,
+            sprintId: body.sprintId || null,
+            attachments: body.attachments || [],
           }
         );
         break;

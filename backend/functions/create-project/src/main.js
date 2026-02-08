@@ -153,9 +153,12 @@ export default async function main({ req, res, log, error: logError }) {
     return res.json(error(validation.errors.join(', ')));
   }
 
-  const { databases, teams } = createAdminClient();
+  const { databases, teams, users } = createAdminClient();
 
   try {
+    // Fetch user details for required fields
+    const user = await users.get(userId);
+
     // Check for duplicate project key
     const existingProjects = await databases.listDocuments(
       DATABASE_ID, COLLECTIONS.PROJECTS,
@@ -189,6 +192,7 @@ export default async function main({ req, res, log, error: logError }) {
         description: body.description || '',
         key: body.key,
         ownerId: userId,
+        userEmail: user.email,
         teamId: team.$id,
         status: 'active',
       }
@@ -202,6 +206,9 @@ export default async function main({ req, res, log, error: logError }) {
       {
         projectId: project.$id,
         userId: userId,
+        userEmail: user.email,
+        userName: user.name || user.email,
+        joinedAt: new Date().toISOString(),
         role: PROJECT_ROLES.ADMIN,
       }
     );

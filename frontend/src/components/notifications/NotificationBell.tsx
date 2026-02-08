@@ -84,7 +84,7 @@ function NotificationDropdown({ onClose }: NotificationDropdownProps) {
           <button
             onClick={handleMarkAllAsRead}
             disabled={markAllAsReadMutation.isPending}
-            className="flex items-center gap-1 text-sm text-[--color-primary-400] hover:text-[--color-primary-300] disabled:opacity-50"
+            className="flex items-center gap-1 text-sm text-[--color-primary-600] hover:text-[--color-primary-700] disabled:opacity-50"
           >
             <CheckCheck className="h-4 w-4" />
             Mark all read
@@ -125,7 +125,7 @@ function NotificationDropdown({ onClose }: NotificationDropdownProps) {
           <Link
             to="/notifications"
             onClick={onClose}
-            className="block text-center text-sm text-[--color-primary-400] hover:text-[--color-primary-300]"
+            className="block text-center text-sm text-[--color-primary-600] hover:text-[--color-primary-700]"
           >
             View all notifications
           </Link>

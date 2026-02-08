@@ -191,7 +191,7 @@ export function TicketDetail() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-400 cursor-pointer"
+                    className="text-red-600 cursor-pointer"
                     onClick={handleDeleteTicket}
                     isLoading={deleteTicketMutation.isPending}
                   >
@@ -296,7 +296,7 @@ export function TicketDetail() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-red-400 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-red-600 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleDeleteComment(comment.$id)}
                         >
                           <Trash2 className="h-3 w-3" />

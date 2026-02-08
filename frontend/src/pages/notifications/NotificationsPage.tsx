@@ -186,7 +186,7 @@ function NotificationRow({ notification, onMarkRead, onDelete }: NotificationRow
             onDelete();
           }}
           title="Delete"
-          className="text-red-400 hover:text-red-300"
+          className="text-red-600 hover:text-red-700"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
