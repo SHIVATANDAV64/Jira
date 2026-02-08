@@ -328,6 +328,6 @@ export default async function main({ req, res, log, error: logError }) {
     return res.json(success(member));
   } catch (err) {
     logError(`Error inviting member: ${err.message}`);
-    return res.json(error('Failed to invite member', 500));
+    return res.json(error(`Failed to invite member: ${err.message}`, 500));
   }
 }

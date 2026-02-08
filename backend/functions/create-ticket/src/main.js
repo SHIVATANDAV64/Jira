@@ -420,6 +420,6 @@ export default async function main({ req, res, log, error: logError }) {
     }));
   } catch (err) {
     logError(`Error creating ticket: ${err.message}`);
-    return res.json(error('Failed to create ticket', 500));
+    return res.json(error(`Failed to create ticket: ${err.message}`, 500));
   }
 }
