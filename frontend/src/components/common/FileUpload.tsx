@@ -174,8 +174,8 @@ export function FileUpload({
             ${compact ? 'p-3' : 'p-6'}
             ${
               dragOver
-                ? 'border-[--color-primary-500] bg-[--color-primary-600]/10'
-                : 'border-[--color-border-primary] hover:border-[--color-border-secondary] hover:bg-[--color-bg-hover]'
+                ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-600)]/10'
+                : 'border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)] hover:bg-[var(--color-bg-hover)]'
             }
             ${uploading ? 'pointer-events-none opacity-60' : ''}
           `}
@@ -190,22 +190,22 @@ export function FileUpload({
           />
           {uploading ? (
             <>
-              <Loader2 className="h-6 w-6 animate-spin text-[--color-primary-500] mb-2" />
-              <span className="text-sm text-[--color-text-muted]">Uploading...</span>
+              <Loader2 className="h-6 w-6 animate-spin text-[var(--color-primary-500)] mb-2" />
+              <span className="text-sm text-[var(--color-text-muted)]">Uploading...</span>
             </>
           ) : (
             <>
-              <Upload className={`text-[--color-text-muted] mb-2 ${compact ? 'h-5 w-5' : 'h-8 w-8'}`} />
+              <Upload className={`text-[var(--color-text-muted)] mb-2 ${compact ? 'h-5 w-5' : 'h-8 w-8'}`} />
               {compact ? (
-                <span className="text-xs text-[--color-text-muted]">
+                <span className="text-xs text-[var(--color-text-muted)]">
                   Drop files or click to upload
                 </span>
               ) : (
                 <>
-                  <span className="text-sm font-medium text-[--color-text-secondary]">
+                  <span className="text-sm font-medium text-[var(--color-text-secondary)]">
                     Drop files here or click to upload
                   </span>
-                  <span className="text-xs text-[--color-text-muted] mt-1">
+                  <span className="text-xs text-[var(--color-text-muted)] mt-1">
                     Max {formatFileSize(MAX_FILE_SIZE)} per file · {maxFiles - attachments.length} remaining
                   </span>
                 </>
@@ -286,18 +286,18 @@ function FileItem({ fileId, info, onRemove, compact }: FileItemProps) {
 
   if (loadingMeta) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-[--color-border-primary] bg-[--color-bg-tertiary] p-2">
-        <Loader2 className="h-4 w-4 animate-spin text-[--color-text-muted]" />
-        <span className="text-xs text-[--color-text-muted]">Loading...</span>
+      <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] p-2">
+        <Loader2 className="h-4 w-4 animate-spin text-[var(--color-text-muted)]" />
+        <span className="text-xs text-[var(--color-text-muted)]">Loading...</span>
       </div>
     );
   }
 
   return (
     <div
-      className={`group flex items-center gap-3 rounded-lg border border-[--color-border-primary] bg-[--color-bg-tertiary] ${
+      className={`group flex items-center gap-3 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] ${
         compact ? 'p-2' : 'p-3'
-      } hover:bg-[--color-bg-hover] transition-colors`}
+      } hover:bg-[var(--color-bg-hover)] transition-colors`}
     >
       {/* Thumbnail / Icon */}
       {previewUrl ? (
@@ -308,22 +308,22 @@ function FileItem({ fileId, info, onRemove, compact }: FileItemProps) {
           onError={() => setPreviewError(true)}
         />
       ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded bg-[--color-bg-primary]">
+        <div className="flex h-10 w-10 items-center justify-center rounded bg-[var(--color-bg-primary)]">
           {isImage ? (
-            <Image className="h-5 w-5 text-[--color-text-muted]" />
+            <Image className="h-5 w-5 text-[var(--color-text-muted)]" />
           ) : (
-            <FileText className="h-5 w-5 text-[--color-text-muted]" />
+            <FileText className="h-5 w-5 text-[var(--color-text-muted)]" />
           )}
         </div>
       )}
 
       {/* File info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[--color-text-primary] truncate">
+        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
           {meta?.name || fileId}
         </p>
         {meta && (
-          <p className="text-xs text-[--color-text-muted]">
+          <p className="text-xs text-[var(--color-text-muted)]">
             {formatFileSize(meta.sizeOriginal)}
           </p>
         )}
@@ -335,7 +335,7 @@ function FileItem({ fileId, info, onRemove, compact }: FileItemProps) {
           href={downloadUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded p-1.5 text-[--color-text-muted] hover:bg-[--color-bg-primary] hover:text-[--color-text-primary] transition-colors"
+          className="rounded p-1.5 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-primary)] hover:text-[var(--color-text-primary)] transition-colors"
           title="Download"
           onClick={(e) => e.stopPropagation()}
         >

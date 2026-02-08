@@ -50,7 +50,11 @@ export async function getNotifications(
         total: response.total,
       },
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    const appwriteError = error as { code?: number };
+    if (appwriteError?.code === 401) {
+      return { success: true, data: { documents: [] as unknown as Notification[], total: 0 } };
+    }
     console.error('Error fetching notifications:', error);
     return {
       success: false,
@@ -80,7 +84,12 @@ export async function getUnreadCount(_userId: string): Promise<ApiResponse<numbe
       success: true,
       data: response.total,
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    // Silently handle 401 (not authenticated) - user is on login page or session expired
+    const appwriteError = error as { code?: number };
+    if (appwriteError?.code === 401) {
+      return { success: true, data: 0 };
+    }
     console.error('Error fetching unread count:', error);
     return {
       success: false,

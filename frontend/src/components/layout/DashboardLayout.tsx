@@ -8,7 +8,7 @@ export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[--color-bg-primary]">
+    <div className="min-h-screen bg-[var(--color-bg-primary)]">
       {/* NAV-03: Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -18,8 +18,8 @@ export function DashboardLayout() {
       )}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-      <main className="md:ml-64 pt-16">
-        <div className="p-4 md:p-6">
+      <main className="relative z-0 md:ml-60 pt-14">
+        <div className="p-4 md:p-5">
           <Breadcrumbs />
           <Outlet />
         </div>

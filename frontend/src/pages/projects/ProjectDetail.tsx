@@ -5,12 +5,13 @@ import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { CreateTicketModal } from '@/components/tickets/CreateTicketModal';
+import { EditTicketModal } from '@/components/tickets/EditTicketModal';
 import { FilterBar } from '@/components/kanban/FilterBar';
 import { useProject, useDeleteProject } from '@/hooks/useProjects';
-import { useTickets, useCreateTicket, useMoveTicket, useSearchTicketsQuery } from '@/hooks/useTickets';
+import { useTickets, useCreateTicket, useMoveTicket, useUpdateTicket, useDeleteTicket, useSearchTicketsQuery } from '@/hooks/useTickets';
 import { useProjectMembers } from '@/hooks/useProjectMembers';
 import { usePermissions } from '@/hooks/usePermissions';
-import type { CreateTicketForm, TicketStatus, TicketFilters, Ticket } from '@/types';
+import type { CreateTicketForm, UpdateTicketForm, TicketStatus, TicketFilters, Ticket } from '@/types';
 
 export function ProjectDetail() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -47,12 +48,15 @@ export function ProjectDetail() {
   
   const createTicketMutation = useCreateTicket(projectId);
   const moveTicketMutation = useMoveTicket(projectId);
+  const updateTicketMutation = useUpdateTicket();
+  const deleteTicketMutation = useDeleteTicket();
   const deleteProjectMutation = useDeleteProject();
   const { members } = useProjectMembers(projectId);
   const { permissions } = usePermissions(members);
   
   const [showCreateTicket, setShowCreateTicket] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
 
   // Sync filters to URL params whenever they change
   useEffect(() => {
@@ -143,6 +147,28 @@ export function ProjectDetail() {
     moveTicketMutation.mutate({ ticketId, newStatus, newOrder });
   };
 
+  const handleTicketEdit = (ticket: Ticket) => {
+    if (permissions.canEditTickets) {
+      setEditingTicket(ticket);
+    }
+  };
+
+  const handleTicketUpdate = async (data: UpdateTicketForm) => {
+    if (!editingTicket) return;
+    try {
+      await updateTicketMutation.mutateAsync({ ticketId: editingTicket.$id, data });
+      setEditingTicket(null);
+    } catch (error) {
+      console.error('Failed to update ticket:', error);
+    }
+  };
+
+  const handleTicketDelete = (ticketId: string) => {
+    if (permissions.canDeleteTickets) {
+      deleteTicketMutation.mutate(ticketId);
+    }
+  };
+
   const handleDeleteProject = async () => {
     if (!projectId) return;
     try {
@@ -159,7 +185,7 @@ export function ProjectDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }
@@ -168,10 +194,10 @@ export function ProjectDetail() {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-[--color-text-primary] mb-2">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
           Failed to load project
         </h2>
-        <p className="text-[--color-text-secondary]">{projectError}</p>
+        <p className="text-[var(--color-text-secondary)]">{projectError}</p>
         <Link to="/projects">
           <Button variant="secondary" className="mt-4">
             Back to Projects
@@ -184,10 +210,10 @@ export function ProjectDetail() {
   if (!project) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-xl font-semibold text-[--color-text-primary]">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
           Project not found
         </h2>
-        <p className="mt-2 text-[--color-text-secondary]">
+        <p className="mt-2 text-[var(--color-text-secondary)]">
           The project you're looking for doesn't exist or you don't have access.
         </p>
         <Link to="/projects">
@@ -200,20 +226,22 @@ export function ProjectDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[--color-primary-100] text-[--color-primary-600] font-bold text-lg">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] font-semibold text-xs">
             {project.key}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[--color-text-primary]">
+            <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
               {project.name}
             </h1>
-            <p className="text-[--color-text-secondary]">
-              {project.description}
-            </p>
+            {project.description && (
+              <p className="text-xs text-[var(--color-text-muted)] max-w-lg truncate">
+                {project.description}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -270,7 +298,7 @@ export function ProjectDetail() {
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm text-[--color-text-muted]">
+          <span className="text-sm text-[var(--color-text-muted)]">
             {filteredTickets.length} of {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
           </span>
           {permissions.canCreateTickets && (
@@ -287,23 +315,23 @@ export function ProjectDetail() {
 
       {/* Ticket Loading Error */}
       {ticketsError && (
-        <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border border-red-500/30 bg-red-500/5 p-6">
+        <div className="flex flex-col items-center justify-center py-12 text-center rounded-lg border border-red-500/30 bg-red-500/5 p-6">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-lg font-semibold text-[--color-text-primary] mb-2">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
             Failed to load tickets
           </h2>
-          <p className="text-[--color-text-secondary]">{ticketsError}</p>
+          <p className="text-[var(--color-text-secondary)]">{ticketsError}</p>
         </div>
       )}
 
       {/* Empty State */}
       {!ticketsError && tickets.length === 0 && !ticketsLoading && (
-        <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
-          <FolderKanban className="h-16 w-16 text-[--color-text-muted] mb-4" />
-          <h2 className="text-xl font-semibold text-[--color-text-primary] mb-2">
+        <div className="flex flex-col items-center justify-center py-16 text-center rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-6">
+          <FolderKanban className="h-16 w-16 text-[var(--color-text-muted)] mb-4" />
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
             No tickets yet
           </h2>
-          <p className="text-[--color-text-secondary] mb-6 max-w-md">
+          <p className="text-[var(--color-text-secondary)] mb-6 max-w-md">
             Start by creating your first ticket to begin tracking work in this project.
           </p>
           {permissions.canCreateTickets && (
@@ -323,6 +351,8 @@ export function ProjectDetail() {
           tickets={filteredTickets}
           projectKey={project.key}
           onTicketMove={handleTicketMove}
+          onTicketEdit={permissions.canEditTickets ? handleTicketEdit : undefined}
+          onTicketDelete={permissions.canDeleteTickets ? handleTicketDelete : undefined}
           members={members}
           hasActiveFilters={hasActiveFilters}
         />
@@ -340,6 +370,18 @@ export function ProjectDetail() {
         />
       )}
 
+      {/* Edit Ticket Modal */}
+      {editingTicket && permissions.canEditTickets && (
+        <EditTicketModal
+          isOpen={!!editingTicket}
+          onClose={() => setEditingTicket(null)}
+          onSubmit={handleTicketUpdate}
+          ticket={editingTicket}
+          members={members}
+          isSubmitting={updateTicketMutation.isPending}
+        />
+      )}
+
       {/* Delete Project Confirmation Modal */}
       <Modal
         isOpen={showDeleteConfirm}
@@ -347,7 +389,7 @@ export function ProjectDetail() {
         title="Delete Project"
       >
         <div className="space-y-4">
-          <p className="text-[--color-text-secondary]">
+          <p className="text-[var(--color-text-secondary)]">
             Are you sure you want to permanently delete this project? This action cannot be undone.
             All tickets, comments, and files will be deleted.
           </p>

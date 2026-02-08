@@ -117,8 +117,8 @@ function validateProject(data) {
 
   if (!data.key || typeof data.key !== 'string') {
     errors.push('Project key is required');
-  } else if (!/^[A-Z]{2,5}$/.test(data.key.trim())) {
-    errors.push('Project key must be 2-5 uppercase letters');
+  } else if (!/^[A-Z][A-Z0-9]{1,4}$/.test(data.key.trim())) {
+    errors.push('Project key must be 2-5 characters, start with a letter, and contain only uppercase letters and numbers');
   }
 
   if (data.description && typeof data.description !== 'string') {

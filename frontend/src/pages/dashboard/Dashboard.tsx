@@ -53,27 +53,27 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon, trend, isLoading }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6 transition-all duration-200 hover:border-[--color-border-secondary] hover:shadow-lg hover:shadow-black/10">
+    <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-[--color-text-muted]">{title}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">{title}</p>
           {isLoading ? (
-            <div className="mt-2">
-              <div className="skeleton h-8 w-16 rounded" />
+            <div className="mt-1.5">
+              <div className="skeleton h-7 w-12 rounded" />
             </div>
           ) : (
-            <p className="mt-1 text-3xl font-bold text-[--color-text-primary]">
+            <p className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">
               {value}
             </p>
           )}
           {trend && !isLoading && (
-            <p className="mt-1 flex items-center gap-1 text-sm text-green-600">
-              <TrendingUp className="h-4 w-4" />
+            <p className="mt-1 flex items-center gap-1 text-xs text-green-700">
+              <TrendingUp className="h-3 w-3" />
               {trend}
             </p>
           )}
         </div>
-        <div className="rounded-lg bg-[--color-primary-500]/10 p-3 text-[--color-primary-600]">
+        <div className="rounded-md bg-[var(--color-bg-tertiary)] p-2.5 text-[var(--color-text-muted)]">
           {icon}
         </div>
       </div>
@@ -89,16 +89,16 @@ function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Link
       to={`/projects/${project.$id}`}
-      className="flex items-center gap-3 p-3 rounded-lg hover:bg-[--color-bg-hover] transition-all duration-200 hover:translate-x-0.5"
+      className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-[var(--color-bg-hover)] transition-colors"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[--color-primary-500]/10 text-[--color-primary-600] font-bold text-sm">
+      <div className="flex h-8 w-8 items-center justify-center rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] font-semibold text-xs">
         {project.key}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-[--color-text-primary] truncate">
+        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
           {project.name}
         </p>
-        <p className="text-sm text-[--color-text-muted]">
+        <p className="text-xs text-[var(--color-text-muted)]">
           {project.status === 'archived' ? 'Archived' : 'Active'}
         </p>
       </div>
@@ -121,26 +121,26 @@ function AssignedTicketCard({ ticket, projects }: AssignedTicketCardProps) {
   const project = projects.find((p) => p.$id === ticket.projectId);
   
   const priorityColors: Record<string, string> = {
-    critical: 'bg-red-50 text-red-700',
-    high: 'bg-orange-50 text-orange-700',
-    medium: 'bg-amber-50 text-amber-700',
-    low: 'bg-blue-50 text-blue-700',
+    critical: 'bg-red-100 text-red-800',
+    high: 'bg-orange-100 text-orange-800',
+    medium: 'bg-amber-100 text-amber-800',
+    low: 'bg-blue-100 text-blue-800',
   };
 
   return (
     <Link
       to={`/tickets/${ticket.$id}`}
-      className="flex items-center gap-3 p-3 rounded-lg hover:bg-[--color-bg-hover] transition-all duration-200 hover:translate-x-0.5"
+      className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-[var(--color-bg-hover)] transition-colors"
     >
-      <div className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${priorityColors[ticket.priority] || 'bg-gray-100 text-gray-700'}`}>
+      <div className={`flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold ${priorityColors[ticket.priority] || 'bg-gray-100 text-gray-600'}`}>
         {ticket.priority.charAt(0).toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-[--color-text-primary] truncate">
+        <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
           {ticket.title}
         </p>
-        <p className="text-sm text-[--color-text-muted]">
-          {project?.key || 'Unknown'} - {ticket.status.replace('_', ' ')}
+        <p className="text-xs text-[var(--color-text-muted)]">
+          {project?.key || 'Unknown'} · {ticket.status.replace('_', ' ')}
         </p>
       </div>
     </Link>
@@ -207,140 +207,135 @@ export function Dashboard() {
   }, [projects]);
 
   return (
-    <div className="space-y-8">
-      {/* Welcome section */}
+    <div className="space-y-6">
+      {/* Page header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[--color-text-primary]">
-            Welcome back, {user?.name?.split(' ')[0] || 'there'}!
-          </h1>
-          <p className="mt-1 text-[--color-text-secondary]">
-            Here's what's happening with your projects
-          </p>
-        </div>
+        <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
+          Dashboard
+        </h1>
         <Link to="/projects/new">
-          <Button leftIcon={<Plus className="h-4 w-4" />}>
+          <Button size="sm" leftIcon={<Plus className="h-4 w-4" />}>
             New Project
           </Button>
         </Link>
       </div>
 
       {/* Stats grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Projects"
+          title="Projects"
           value={stats.totalProjects}
-          icon={<FolderKanban className="h-6 w-6" />}
+          icon={<FolderKanban className="h-5 w-5" />}
           isLoading={isLoading}
         />
         <StatCard
-          title="Total Tickets"
+          title="Tickets"
           value={stats.totalTickets}
-          icon={<TicketIcon className="h-6 w-6" />}
+          icon={<TicketIcon className="h-5 w-5" />}
           isLoading={isLoading || stats.ticketsLoading}
         />
         <StatCard
           title="Assigned to Me"
           value={stats.myTickets}
-          icon={<Users className="h-6 w-6" />}
+          icon={<Users className="h-5 w-5" />}
           isLoading={isLoading || stats.ticketsLoading}
         />
         <StatCard
-          title="Completed This Week"
+          title="Done This Week"
           value={stats.completedThisWeek}
-          icon={<CheckCircle className="h-6 w-6" />}
+          icon={<CheckCircle className="h-5 w-5" />}
           isLoading={isLoading || stats.ticketsLoading}
         />
       </div>
 
-      {/* Recent activity and quick actions */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Lists */}
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Recent Projects */}
-        <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[--color-text-primary]">
+        <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
               Recent Projects
             </h2>
             <Link
               to="/projects"
-              className="flex items-center gap-1 text-sm text-[--color-primary-500] hover:text-[--color-primary-600]"
+              className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)]"
             >
-              View all <ArrowRight className="h-4 w-4" />
+              View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          {isLoading ? (
-            <div className="space-y-1">
-              {[1, 2, 3].map((i) => (
-                <ProjectCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : recentProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <FolderKanban className="h-12 w-12 text-[--color-text-muted] mb-3" />
-              <p className="text-[--color-text-secondary]">No projects yet</p>
-              <p className="text-sm text-[--color-text-muted] mb-4">
-                Create your first project to get started
-              </p>
-              <Link to="/projects/new">
-                <Button variant="secondary" size="sm">
-                  Create Project
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {recentProjects.map((project) => (
-                <ProjectCard key={project.$id} project={project} />
-              ))}
-            </div>
-          )}
+          <div className="p-2">
+            {isLoading ? (
+              <div className="space-y-1">
+                {[1, 2, 3].map((i) => (
+                  <ProjectCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : recentProjects.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <FolderKanban className="h-8 w-8 text-[var(--color-text-muted)] mb-2" />
+                <p className="text-sm text-[var(--color-text-secondary)]">No projects yet</p>
+                <Link to="/projects/new" className="mt-3">
+                  <Button variant="secondary" size="sm">
+                    Create Project
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-0.5">
+                {recentProjects.map((project) => (
+                  <ProjectCard key={project.$id} project={project} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Assigned to Me */}
-        <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[--color-text-primary]">
+        <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
               Assigned to Me
             </h2>
           </div>
-          {stats.ticketsLoading ? (
-            <div className="space-y-1">
-              {[1, 2, 3].map((i) => (
-                <TicketCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : stats.assignedTickets.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <TicketIcon className="h-12 w-12 text-[--color-text-muted] mb-3" />
-              <p className="text-[--color-text-secondary]">No tickets assigned</p>
-              <p className="text-sm text-[--color-text-muted]">
-                Tickets assigned to you will appear here
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {stats.assignedTickets.map((ticket) => (
-                <AssignedTicketCard key={ticket.$id} ticket={ticket} projects={projects} />
-              ))}
-            </div>
-          )}
+          <div className="p-2">
+            {stats.ticketsLoading ? (
+              <div className="space-y-1">
+                {[1, 2, 3].map((i) => (
+                  <TicketCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : stats.assignedTickets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <TicketIcon className="h-8 w-8 text-[var(--color-text-muted)] mb-2" />
+                <p className="text-sm text-[var(--color-text-secondary)]">No tickets assigned</p>
+              </div>
+            ) : (
+              <div className="space-y-0.5">
+                {stats.assignedTickets.map((ticket) => (
+                  <AssignedTicketCard key={ticket.$id} ticket={ticket} projects={projects} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Activity Log */}
-      <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-[--color-text-primary]">
-            Recent Activity
+      <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+        <div className="px-4 py-3 border-b border-[var(--color-border-primary)]">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
+            Activity
           </h2>
         </div>
-        <ActivityLog
-          activities={activities}
-          isLoading={activitiesLoading}
-          emptyMessage="No recent activity"
-          showProject
-        />
+        <div className="p-4">
+          <ActivityLog
+            activities={activities}
+            isLoading={activitiesLoading}
+            emptyMessage="No recent activity"
+            showProject
+          />
+        </div>
       </div>
     </div>
   );

@@ -17,27 +17,27 @@ export function KanbanColumn({ id, title, ticketCount, children }: KanbanColumnP
     <div
       ref={setNodeRef}
       className={clsx(
-        'flex-shrink-0 w-80 rounded-xl bg-[--color-bg-secondary] border transition-colors',
+        'flex-shrink-0 w-72 rounded-lg bg-[var(--color-bg-tertiary)] transition-colors',
         isOver
-          ? 'border-[--color-primary-500]'
-          : 'border-[--color-border-primary]'
+          ? 'ring-2 ring-[var(--color-primary-500)]'
+          : ''
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[--color-border-primary]">
+      <div className="flex items-center justify-between px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <h3 className="font-medium text-[--color-text-primary]">{title}</h3>
-          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[--color-bg-tertiary] px-1.5 text-xs text-[--color-text-muted]">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{title}</h3>
+          <span className="text-xs text-[var(--color-text-muted)]">
             {ticketCount}
           </span>
         </div>
       </div>
 
       {/* Cards */}
-      <div className="p-2 space-y-2 min-h-[200px] max-h-[calc(100vh-300px)] overflow-y-auto">
+      <div className="px-2 pb-2 space-y-1.5 min-h-[100px] max-h-[calc(100vh-250px)] overflow-y-auto">
         {children}
         {ticketCount === 0 && (
-          <div className="flex items-center justify-center h-24 text-sm text-[--color-text-muted]">
+          <div className="flex items-center justify-center h-20 text-xs text-[var(--color-text-muted)]">
             No tickets
           </div>
         )}

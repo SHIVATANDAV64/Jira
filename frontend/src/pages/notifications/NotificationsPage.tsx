@@ -47,7 +47,7 @@ export function NotificationsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }
@@ -57,10 +57,10 @@ export function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[--color-text-primary]">
+          <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
             Notifications
           </h1>
-          <p className="text-[--color-text-secondary]">
+          <p className="text-[var(--color-text-secondary)]">
             {unreadCount > 0
               ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
               : 'All caught up!'}
@@ -80,14 +80,14 @@ export function NotificationsPage() {
       </div>
 
       {/* Notification List */}
-      <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] overflow-hidden">
+      <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] overflow-hidden">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Bell className="h-16 w-16 text-[--color-text-muted] mb-4" />
-            <h2 className="text-lg font-semibold text-[--color-text-primary] mb-2">
+            <Bell className="h-16 w-16 text-[var(--color-text-muted)] mb-4" />
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
               No notifications
             </h2>
-            <p className="text-[--color-text-secondary]">
+            <p className="text-[var(--color-text-secondary)]">
               You're all caught up! Check back later for updates.
             </p>
           </div>
@@ -136,27 +136,27 @@ interface NotificationRowProps {
 function NotificationRow({ notification, onMarkRead, onDelete }: NotificationRowProps) {
   const content = (
     <div
-      className={`flex items-start gap-4 p-4 hover:bg-[--color-bg-hover] transition-colors ${
-        !notification.read ? 'bg-[--color-primary-600]/5' : ''
+      className={`flex items-start gap-4 p-4 hover:bg-[var(--color-bg-hover)] transition-colors ${
+        !notification.read ? 'bg-[var(--color-primary-600)]/5' : ''
       }`}
     >
       {/* Unread indicator */}
       <div className="relative">
         {!notification.read && (
-          <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[--color-primary-500]" />
+          <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-primary-500)]" />
         )}
         <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-[--color-text-primary]">
+        <p className="font-medium text-[var(--color-text-primary)]">
           {notification.title}
         </p>
-        <p className="text-sm text-[--color-text-secondary] mt-1">
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">
           {notification.message}
         </p>
-        <p className="text-xs text-[--color-text-muted] mt-2">
+        <p className="text-xs text-[var(--color-text-muted)] mt-2">
           {formatNotificationTime(notification.$createdAt)}
         </p>
       </div>

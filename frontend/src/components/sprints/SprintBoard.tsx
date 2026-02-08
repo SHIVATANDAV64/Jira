@@ -71,7 +71,7 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }
@@ -80,7 +80,7 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-[--color-text-primary]">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
           Sprints & Backlog
         </h2>
         {permissions.canEditProject && (
@@ -117,7 +117,7 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
       {/* Planning Sprints */}
       {planningSprints.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-[--color-text-secondary]">
+          <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">
             Upcoming Sprints
           </h3>
           {planningSprints.map((sprint) => (
@@ -143,16 +143,16 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
       )}
 
       {/* Backlog */}
-      <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary]">
-        <div className="flex items-center justify-between p-4 border-b border-[--color-border-primary]">
+      <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-primary)]">
           <div className="flex items-center gap-3">
-            <h3 className="font-medium text-[--color-text-primary]">Backlog</h3>
+            <h3 className="font-medium text-[var(--color-text-primary)]">Backlog</h3>
             <Badge variant="default">{backlogTickets.length} items</Badge>
           </div>
         </div>
         <div className="p-4">
           {backlogTickets.length === 0 ? (
-            <p className="text-sm text-[--color-text-muted] text-center py-4">
+            <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
               No items in backlog
             </p>
           ) : (
@@ -172,7 +172,7 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
       {/* Completed Sprints */}
       {completedSprints.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-medium text-[--color-text-secondary]">
+          <h3 className="text-sm font-medium text-[var(--color-text-secondary)]">
             Completed Sprints
           </h3>
           {completedSprints.slice(0, showMoreCompleted ? undefined : 3).map((sprint) => (
@@ -239,7 +239,7 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-[--color-text-secondary]">
+          <p className="text-[var(--color-text-secondary)]">
             Are you sure you want to delete this sprint? This action cannot be undone.
           </p>
           <div className="flex justify-end gap-3">
@@ -316,13 +316,13 @@ function SprintCard({
   };
 
   return (
-    <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary]">
+    <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
       {/* Sprint Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[--color-border-primary]">
+      <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-primary)]">
         <div className="flex items-center gap-3">
           <button
             onClick={onToggle}
-            className="text-[--color-text-muted] hover:text-[--color-text-primary]"
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
           >
             {isExpanded ? (
               <ChevronDown className="h-5 w-5" />
@@ -332,14 +332,14 @@ function SprintCard({
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-medium text-[--color-text-primary]">
+              <h3 className="font-medium text-[var(--color-text-primary)]">
                 {sprint.name}
               </h3>
               <Badge className={statusColors[sprint.status]}>
                 {sprint.status}
               </Badge>
             </div>
-            <div className="flex items-center gap-4 mt-1 text-sm text-[--color-text-muted]">
+            <div className="flex items-center gap-4 mt-1 text-sm text-[var(--color-text-muted)]">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
                 {format(new Date(sprint.startDate), 'MMM d')} -{' '}
@@ -393,9 +393,9 @@ function SprintCard({
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-[--color-border-primary] bg-[--color-bg-secondary] shadow-lg z-20">
+                <div className="absolute right-0 top-full mt-1 w-36 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-lg z-20">
                   <button
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[--color-text-primary] hover:bg-[--color-bg-hover]"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
                     onClick={() => {
                       setShowMenu(false);
                       onEdit?.();
@@ -405,7 +405,7 @@ function SprintCard({
                     Edit
                   </button>
                   <button
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-[--color-bg-hover]"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-[var(--color-bg-hover)]"
                     onClick={() => {
                       setShowMenu(false);
                       onDelete?.();
@@ -423,10 +423,10 @@ function SprintCard({
 
       {/* Sprint Goal */}
       {sprint.goal && isExpanded && (
-        <div className="px-4 py-3 border-b border-[--color-border-primary] bg-[--color-bg-tertiary]">
+        <div className="px-4 py-3 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)]">
           <div className="flex items-start gap-2 text-sm">
-            <Target className="h-4 w-4 text-[--color-text-muted] mt-0.5" />
-            <p className="text-[--color-text-secondary]">{sprint.goal}</p>
+            <Target className="h-4 w-4 text-[var(--color-text-muted)] mt-0.5" />
+            <p className="text-[var(--color-text-secondary)]">{sprint.goal}</p>
           </div>
         </div>
       )}
@@ -435,7 +435,7 @@ function SprintCard({
       {isExpanded && (
         <div className="p-4">
           {tickets.length === 0 ? (
-            <p className="text-sm text-[--color-text-muted] text-center py-4">
+            <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
               {isCompleted ? 'Sprint completed' : 'No tickets in this sprint'}
             </p>
           ) : (
@@ -479,17 +479,17 @@ function BacklogItem({ ticket, onClick }: BacklogItemProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 p-3 rounded-lg border border-[--color-border-primary] bg-[--color-bg-primary] hover:border-[--color-border-secondary] transition-colors text-left"
+      className="w-full flex items-center gap-3 p-3 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-primary)] hover:border-[var(--color-border-secondary)] transition-colors text-left"
     >
       <div
         className={`w-1 h-8 rounded-full ${priorityColors[ticket.priority] || 'bg-gray-500'}`}
       />
       <span className="text-lg">{typeIcons[ticket.type] || '📋'}</span>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-[--color-text-primary] truncate">
+        <p className="font-medium text-[var(--color-text-primary)] truncate">
           {ticket.title}
         </p>
-        <p className="text-xs text-[--color-text-muted]">
+        <p className="text-xs text-[var(--color-text-muted)]">
           {ticket.status.replace('_', ' ')}
         </p>
       </div>

@@ -2,6 +2,45 @@ import { databases, DATABASE_ID, COLLECTIONS, account } from '@/lib/appwrite';
 import type { ActivityLog, ApiResponse, PaginatedResponse } from '@/types';
 import { Query } from 'appwrite';
 
+async function enrichActivities(activities: ActivityLog[]): Promise<ActivityLog[]> {
+  const userIds = [...new Set(activities.map(a => a.userId))];
+  if (userIds.length === 0) return activities;
+
+  try {
+    // Determine unique users from Project Members to resolve names
+    const members = await databases.listDocuments(
+      DATABASE_ID,
+      COLLECTIONS.PROJECT_MEMBERS,
+      [
+        Query.equal('userId', userIds),
+        Query.limit(100),
+      ]
+    );
+
+    const userMap = new Map();
+    for (const doc of members.documents) {
+      if (!userMap.has(doc.userId)) {
+        userMap.set(doc.userId, {
+          $id: doc.userId,
+          name: doc.userName,
+          email: doc.userEmail,
+          $createdAt: doc.$createdAt,
+          $updatedAt: doc.$updatedAt,
+        });
+      }
+    }
+
+    activities.forEach(activity => {
+      if (userMap.has(activity.userId)) {
+        activity.user = userMap.get(activity.userId) as any;
+      }
+    });
+  } catch (e) {
+    console.error('Failed to enrich user details', e);
+  }
+  return activities;
+}
+
 /**
  * Parse activity log details from JSON string if needed
  */
@@ -76,10 +115,13 @@ export async function getProjectActivity(
       ]
     );
 
+    const activities = parseActivityDetails(response.documents as unknown as ActivityLog[]);
+    await enrichActivities(activities);
+
     return {
       success: true,
       data: {
-        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
+        documents: activities,
         total: response.total,
       },
     };
@@ -116,10 +158,14 @@ export async function getUserActivity(
       ]
     );
 
+    const activities = parseActivityDetails(response.documents as unknown as ActivityLog[]);
+    // Populate with known user to avoid Unknown User
+    activities.forEach(a => a.user = user as any);
+
     return {
       success: true,
       data: {
-        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
+        documents: activities,
         total: response.total,
       },
     };
@@ -152,10 +198,13 @@ export async function getRecentActivity(
       ]
     );
 
+    const activities = parseActivityDetails(response.documents as unknown as ActivityLog[]);
+    await enrichActivities(activities);
+
     return {
       success: true,
       data: {
-        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
+        documents: activities,
         total: response.total,
       },
     };
@@ -212,10 +261,13 @@ export async function getTicketActivity(
       ]
     );
 
+    const activities = parseActivityDetails(response.documents as unknown as ActivityLog[]);
+    await enrichActivities(activities);
+
     return {
       success: true,
       data: {
-        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
+        documents: activities,
         total: response.total,
       },
     };

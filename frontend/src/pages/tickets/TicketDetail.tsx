@@ -128,7 +128,7 @@ export function TicketDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }
@@ -136,10 +136,10 @@ export function TicketDetail() {
   if (!ticket) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-xl font-semibold text-[--color-text-primary]">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
           Ticket not found
         </h2>
-        <p className="mt-2 text-[--color-text-secondary]">
+        <p className="mt-2 text-[var(--color-text-secondary)]">
           The ticket you're looking for doesn't exist or you don't have access.
         </p>
         <Button
@@ -158,7 +158,7 @@ export function TicketDetail() {
       {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-[--color-text-secondary] hover:text-[--color-text-primary] mb-6 cursor-pointer"
+        className="flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] mb-6 cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to board
@@ -168,11 +168,11 @@ export function TicketDetail() {
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Header */}
-          <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
+          <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
                 <TypeBadge type={ticket.type} />
-                <span className="text-sm text-[--color-text-muted]">
+                <span className="text-sm text-[var(--color-text-muted)]">
                   {ticket.ticketKey ? ticket.ticketKey : `TICKET-${ticket.ticketNumber}`}
                 </span>
               </div>
@@ -201,23 +201,23 @@ export function TicketDetail() {
               </div>
             </div>
 
-            <h1 className="text-2xl font-bold text-[--color-text-primary] mb-4">
+            <h1 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">
               {ticket.title}
             </h1>
 
             <div className="prose prose-invert max-w-none">
-              <p className="text-[--color-text-secondary]">
+              <p className="text-[var(--color-text-secondary)]">
                 {ticket.description || 'No description provided.'}
               </p>
             </div>
 
             {/* Labels */}
             {ticket.labels && ticket.labels.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[--color-border-primary]">
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[var(--color-border-primary)]">
                 {ticket.labels.map((label) => (
                   <span
                     key={label}
-                    className="rounded-full bg-[--color-bg-tertiary] px-3 py-1 text-sm text-[--color-text-secondary]"
+                    className="rounded-full bg-[var(--color-bg-tertiary)] px-3 py-1 text-sm text-[var(--color-text-secondary)]"
                   >
                     {label}
                   </span>
@@ -227,8 +227,8 @@ export function TicketDetail() {
           </div>
 
           {/* Comments */}
-          <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-[--color-text-primary] mb-4">
+          <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-6">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--color-text-primary)] mb-4">
               <MessageSquare className="h-5 w-5" />
               Comments ({comments.length})
             </h2>
@@ -257,7 +257,7 @@ export function TicketDetail() {
 
             {/* Comments list */}
             {comments.length === 0 ? (
-              <p className="text-center py-8 text-[--color-text-muted]">
+              <p className="text-center py-8 text-[var(--color-text-muted)]">
                 No comments yet. Be the first to comment!
               </p>
             ) : (
@@ -265,7 +265,7 @@ export function TicketDetail() {
                 {comments.map((comment) => (
                   <div
                     key={comment.$id}
-                    className="group flex gap-3 p-4 rounded-lg bg-[--color-bg-primary]"
+                    className="group flex gap-3 p-4 rounded-lg bg-[var(--color-bg-primary)]"
                   >
                     {comment.user && (
                       <Avatar
@@ -277,17 +277,17 @@ export function TicketDetail() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-[--color-text-primary]">
+                          <span className="font-medium text-[var(--color-text-primary)]">
                             {comment.user?.name || 'Unknown'}
                           </span>
-                          <span className="text-xs text-[--color-text-muted]">
+                          <span className="text-xs text-[var(--color-text-muted)]">
                             {format(new Date(comment.$createdAt), 'MMM d, yyyy h:mm a')}
                             {/* CMT-06: Show (edited) indicator if comment was edited */}
                             {comment.$updatedAt &&
                               new Date(comment.$updatedAt).getTime() -
                                 new Date(comment.$createdAt).getTime() >
                                 1000 && (
-                              <span className="ml-1 text-xs text-[--color-text-muted] italic">
+                              <span className="ml-1 text-xs text-[var(--color-text-muted)] italic">
                                 (edited)
                               </span>
                             )}
@@ -302,13 +302,13 @@ export function TicketDetail() {
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                      <p className="text-[--color-text-secondary]">
+                      <p className="text-[var(--color-text-secondary)]">
                         {comment.content}
                       </p>
                       
                       {/* Nested replies */}
                       {comment.replies && comment.replies.length > 0 && (
-                        <div className="mt-3 pl-4 border-l-2 border-[--color-border-primary] space-y-3">
+                        <div className="mt-3 pl-4 border-l-2 border-[var(--color-border-primary)] space-y-3">
                           {comment.replies.map((reply) => (
                             <div key={reply.$id} className="flex gap-2">
                               {reply.user && (
@@ -320,10 +320,10 @@ export function TicketDetail() {
                               )}
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-sm text-[--color-text-primary]">
+                                  <span className="font-medium text-sm text-[var(--color-text-primary)]">
                                     {reply.user?.name || 'Unknown'}
                                   </span>
-                                  <span className="text-xs text-[--color-text-muted]">
+                                  <span className="text-xs text-[var(--color-text-muted)]">
                                     {format(new Date(reply.$createdAt), 'MMM d, yyyy h:mm a')}
                                     {/* CMT-06: Show (edited) indicator for replies too */}
                                     {reply.$updatedAt &&
@@ -336,7 +336,7 @@ export function TicketDetail() {
                                     )}
                                   </span>
                                 </div>
-                                <p className="text-sm text-[--color-text-secondary]">
+                                <p className="text-sm text-[var(--color-text-secondary)]">
                                   {reply.content}
                                 </p>
                               </div>
@@ -355,28 +355,28 @@ export function TicketDetail() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Details */}
-          <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
-            <h2 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+          <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-6">
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
               Details
             </h2>
 
             <dl className="space-y-4">
               <div>
-                <dt className="text-sm text-[--color-text-muted] mb-1">Status</dt>
+                <dt className="text-sm text-[var(--color-text-muted)] mb-1">Status</dt>
                 <dd>
                   <StatusBadge status={ticket.status} />
                 </dd>
               </div>
 
               <div>
-                <dt className="text-sm text-[--color-text-muted] mb-1">Priority</dt>
+                <dt className="text-sm text-[var(--color-text-muted)] mb-1">Priority</dt>
                 <dd>
                   <PriorityBadge priority={ticket.priority} />
                 </dd>
               </div>
 
               <div>
-                <dt className="text-sm text-[--color-text-muted] mb-1">Assignee</dt>
+                <dt className="text-sm text-[var(--color-text-muted)] mb-1">Assignee</dt>
                 <dd className="flex items-center gap-2">
                   {ticket.assignee ? (
                     <>
@@ -385,12 +385,12 @@ export function TicketDetail() {
                         name={ticket.assignee.name}
                         size="sm"
                       />
-                      <span className="text-[--color-text-primary]">
+                      <span className="text-[var(--color-text-primary)]">
                         {ticket.assignee.name}
                       </span>
                     </>
                   ) : (
-                    <span className="flex items-center gap-2 text-[--color-text-muted]">
+                    <span className="flex items-center gap-2 text-[var(--color-text-muted)]">
                       <User className="h-4 w-4" />
                       Unassigned
                     </span>
@@ -416,8 +416,8 @@ export function TicketDetail() {
 
               {ticket.dueDate && (
                 <div>
-                  <dt className="text-sm text-[--color-text-muted] mb-1">Due Date</dt>
-                  <dd className="flex items-center gap-2 text-[--color-text-primary]">
+                  <dt className="text-sm text-[var(--color-text-muted)] mb-1">Due Date</dt>
+                  <dd className="flex items-center gap-2 text-[var(--color-text-primary)]">
                     <Calendar className="h-4 w-4" />
                     {format(new Date(ticket.dueDate), 'MMM d, yyyy')}
                   </dd>
@@ -427,7 +427,7 @@ export function TicketDetail() {
               {/* Attachments */}
               {ticket.attachments && ticket.attachments.length > 0 && (
                 <div>
-                  <dt className="text-sm text-[--color-text-muted] mb-1 flex items-center gap-1">
+                  <dt className="text-sm text-[var(--color-text-muted)] mb-1 flex items-center gap-1">
                     <Paperclip className="h-3 w-3" />
                     Attachments ({ticket.attachments.length})
                   </dt>
@@ -438,15 +438,15 @@ export function TicketDetail() {
               )}
 
               <div>
-                <dt className="text-sm text-[--color-text-muted] mb-1">Created</dt>
-                <dd className="text-[--color-text-secondary]">
+                <dt className="text-sm text-[var(--color-text-muted)] mb-1">Created</dt>
+                <dd className="text-[var(--color-text-secondary)]">
                   {format(new Date(ticket.$createdAt), 'MMM d, yyyy')}
                 </dd>
               </div>
 
               <div>
-                <dt className="text-sm text-[--color-text-muted] mb-1">Updated</dt>
-                <dd className="text-[--color-text-secondary]">
+                <dt className="text-sm text-[var(--color-text-muted)] mb-1">Updated</dt>
+                <dd className="text-[var(--color-text-secondary)]">
                   {format(new Date(ticket.$updatedAt), 'MMM d, yyyy')}
                 </dd>
               </div>
@@ -475,7 +475,7 @@ export function TicketDetail() {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-[--color-text-secondary]">
+          <p className="text-[var(--color-text-secondary)]">
             Are you sure you want to delete this ticket? This action cannot be undone.
           </p>
           <div className="flex justify-end gap-3">

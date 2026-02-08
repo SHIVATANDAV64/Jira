@@ -32,16 +32,16 @@ export function Breadcrumbs() {
           return (
             <li key={crumb.path ?? index} className="flex items-center gap-1.5">
               {index > 0 && (
-                <ChevronRight className="h-3.5 w-3.5 text-[--color-text-muted] shrink-0" />
+                <ChevronRight className="h-3.5 w-3.5 text-[var(--color-text-muted)] shrink-0" />
               )}
               {isLast || !crumb.path ? (
-                <span className="text-[--color-text-primary] font-medium truncate max-w-[200px]">
+                <span className="text-[var(--color-text-primary)] font-medium truncate max-w-[200px]">
                   {crumb.label}
                 </span>
               ) : (
                 <Link
                   to={crumb.path}
-                  className="text-[--color-text-muted] hover:text-[--color-text-primary] transition-colors truncate max-w-[200px]"
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors truncate max-w-[200px]"
                 >
                   {index === 0 ? (
                     <span className="flex items-center gap-1">

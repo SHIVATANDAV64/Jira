@@ -60,17 +60,17 @@ export function Modal({
       <div
         className={clsx(
           'relative w-full mx-4 animate-scale-in',
-          'bg-[--color-bg-secondary] rounded-xl shadow-2xl shadow-black/40',
-          'border border-[--color-border-primary]',
+          'bg-[var(--color-bg-secondary)] rounded-lg shadow-2xl shadow-black/40',
+          'border border-[var(--color-border-primary)]',
           'ring-1 ring-white/5',
           sizeStyles[size]
         )}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[--color-border-primary]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border-primary)]">
             {title && (
-              <h2 className="text-lg font-semibold text-[--color-text-primary]">
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {title}
               </h2>
             )}

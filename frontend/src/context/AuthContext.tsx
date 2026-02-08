@@ -23,6 +23,7 @@ interface AuthContextType {
   loginWithGoogle: (returnUrl?: string) => Promise<void>;
   sessionWarning: boolean;
   extendSession: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -260,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginWithGoogle,
     sessionWarning,
     extendSession,
+    refreshUser: checkAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

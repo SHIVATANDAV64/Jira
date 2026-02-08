@@ -61,7 +61,10 @@ export const FUNCTIONS_IDS = {
 } as const;
 
 // Helper to get avatar URL
-export function getAvatarUrl(_userId: string, name: string): string {
+export function getAvatarUrl(_userId: string, name: string, avatarId?: string): string {
+  if (avatarId) {
+    return `${APPWRITE_ENDPOINT}/storage/buckets/${BUCKETS.AVATARS}/files/${avatarId}/preview?project=${APPWRITE_PROJECT_ID}`;
+  }
   return `${APPWRITE_ENDPOINT}/avatars/initials?name=${encodeURIComponent(name)}&project=${APPWRITE_PROJECT_ID}`;
 }
 

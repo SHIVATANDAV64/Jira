@@ -41,10 +41,10 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="mb-4 rounded-full bg-red-500/10 p-4">
             <AlertTriangle className="h-8 w-8 text-red-500" />
           </div>
-          <h2 className="mb-2 text-xl font-semibold text-[--color-text-primary]">
+          <h2 className="mb-2 text-xl font-semibold text-[var(--color-text-primary)]">
             Something went wrong
           </h2>
-          <p className="mb-6 max-w-md text-[--color-text-secondary]">
+          <p className="mb-6 max-w-md text-[var(--color-text-secondary)]">
             An unexpected error occurred. Please try again.
           </p>
           <Button

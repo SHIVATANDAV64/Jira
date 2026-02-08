@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Settings,
   User,
@@ -12,7 +12,8 @@ import {
   Monitor,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { account } from '@/lib/appwrite';
+import { account, storage, BUCKETS } from '@/lib/appwrite';
+import { ID, Permission, Role } from 'appwrite';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { Avatar } from '@/components/common/Avatar';
@@ -35,9 +36,11 @@ const tabs: TabConfig[] = [
 ];
 
 export function SettingsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile state
   const [name, setName] = useState(user?.name || '');
@@ -83,12 +86,65 @@ export function SettingsPage() {
     setIsSaving(true);
     try {
       await account.updateName(name.trim());
+      await refreshUser();
       toast.success('Profile updated successfully');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to update profile';
       toast.error(message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('File must be an image');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // 1. Upload file
+      const fileUpload = await storage.createFile(
+        BUCKETS.AVATARS,
+        ID.unique(),
+        file,
+        [
+          Permission.read(Role.any()),
+          Permission.write(Role.user(user!.$id)),
+          Permission.delete(Role.user(user!.$id)),
+        ]
+      );
+
+      // 2. Update user prefs
+      const prefs = await account.getPrefs();
+      await account.updatePrefs({ ...prefs, avatar: fileUpload.$id });
+
+      // 3. Refresh user
+      await refreshUser();
+      
+      toast.success('Avatar updated successfully');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to upload avatar';
+      toast.error(message);
+    } finally {
+      setIsUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -113,15 +169,26 @@ export function SettingsPage() {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 Profile Information
               </h3>
               <div className="flex items-start gap-6">
                 <div className="flex flex-col items-center gap-2">
-                  <Avatar userId={user?.$id} name={name || 'User'} size="lg" className="h-20 w-20 text-2xl" />
-                  <button className="text-sm text-[--color-primary-600] hover:text-[--color-primary-700] cursor-pointer">
-                    Change avatar
+                  <Avatar userId={user?.$id} name={name || 'User'} avatarId={user?.prefs?.avatar} size="lg" className="h-20 w-20 text-2xl" />
+                  <button 
+                    onClick={handleAvatarClick}
+                    disabled={isUploading}
+                    className="text-sm text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)] cursor-pointer disabled:opacity-50"
+                  >
+                    {isUploading ? 'Uploading...' : 'Change avatar'}
                   </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
                 </div>
                 <div className="flex-1 space-y-4">
                   <Input
@@ -136,14 +203,14 @@ export function SettingsPage() {
                     disabled
                     className="opacity-60"
                   />
-                  <p className="text-sm text-[--color-text-muted]">
+                  <p className="text-sm text-[var(--color-text-muted)]">
                     Email cannot be changed. Contact support if you need assistance.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-[--color-border-primary] pt-6">
+            <div className="border-t border-[var(--color-border-primary)] pt-6">
               <Button
                 onClick={handleSaveProfile}
                 isLoading={isSaving}
@@ -159,7 +226,7 @@ export function SettingsPage() {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 Notification Preferences
               </h3>
               <div className="space-y-4">
@@ -190,7 +257,7 @@ export function SettingsPage() {
               </div>
             </div>
 
-            <div className="border-t border-[--color-border-primary] pt-6">
+            <div className="border-t border-[var(--color-border-primary)] pt-6">
               <Button
                 onClick={handleSaveNotifications}
                 leftIcon={<Save className="h-4 w-4" />}
@@ -205,7 +272,7 @@ export function SettingsPage() {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 Theme Settings
               </h3>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -238,24 +305,24 @@ export function SettingsPage() {
               )}
             </div>
 
-            <div className="border-t border-[--color-border-primary] pt-6">
-              <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+            <div className="border-t border-[var(--color-border-primary)] pt-6">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 Display Settings
               </h3>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[--color-bg-tertiary]">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--color-bg-tertiary)]">
                   <div>
-                    <p className="font-medium text-[--color-text-primary]">Compact Mode</p>
-                    <p className="text-sm text-[--color-text-muted]">
+                    <p className="font-medium text-[var(--color-text-primary)]">Compact Mode</p>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Show more content with smaller spacing
                     </p>
                   </div>
                   <Toggle checked={false} onChange={() => toast('Coming soon')} />
                 </div>
-                <div className="flex items-center justify-between p-4 rounded-lg bg-[--color-bg-tertiary]">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--color-bg-tertiary)]">
                   <div>
-                    <p className="font-medium text-[--color-text-primary]">Show Avatars</p>
-                    <p className="text-sm text-[--color-text-muted]">
+                    <p className="font-medium text-[var(--color-text-primary)]">Show Avatars</p>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Display user avatars in lists and cards
                     </p>
                   </div>
@@ -275,11 +342,11 @@ export function SettingsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[--color-text-primary] flex items-center gap-2">
+        <h1 className="text-xl font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
           <Settings className="h-6 w-6" />
           Settings
         </h1>
-        <p className="mt-1 text-[--color-text-secondary]">
+        <p className="mt-1 text-[var(--color-text-secondary)]">
           Manage your account settings and preferences
         </p>
       </div>
@@ -295,8 +362,8 @@ export function SettingsPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     activeTab === tab.id
-                      ? 'bg-[--color-primary-600] text-white'
-                      : 'text-[--color-text-secondary] hover:bg-[--color-bg-hover] hover:text-[--color-text-primary]'
+                      ? 'bg-[var(--color-primary-600)] text-white'
+                      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
                   {tab.icon}
@@ -308,7 +375,7 @@ export function SettingsPage() {
         </nav>
 
         {/* Content */}
-        <div className="flex-1 rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6">
+        <div className="flex-1 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-6">
           {renderTabContent()}
         </div>
       </div>
@@ -327,10 +394,10 @@ interface NotificationToggleProps {
 
 function NotificationToggle({ label, description, checked, onChange }: NotificationToggleProps) {
   return (
-    <div className="flex items-center justify-between p-4 rounded-lg bg-[--color-bg-tertiary]">
+    <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--color-bg-tertiary)]">
       <div>
-        <p className="font-medium text-[--color-text-primary]">{label}</p>
-        <p className="text-sm text-[--color-text-muted]">{description}</p>
+        <p className="font-medium text-[var(--color-text-primary)]">{label}</p>
+        <p className="text-sm text-[var(--color-text-muted)]">{description}</p>
       </div>
       <Toggle checked={checked} onChange={onChange} />
     </div>
@@ -347,7 +414,7 @@ function Toggle({ checked, onChange }: ToggleProps) {
     <button
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-        checked ? 'bg-[--color-primary-600]' : 'bg-[--color-bg-tertiary] border border-[--color-border-primary]'
+        checked ? 'bg-[var(--color-primary-600)]' : 'bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)]'
       }`}
     >
       <span
@@ -373,15 +440,15 @@ function ThemeOption({ mode, label, icon, selected, onSelect }: ThemeOptionProps
       onClick={() => onSelect(mode)}
       className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
         selected
-          ? 'border-[--color-primary-500] bg-[--color-primary-600]/10'
-          : 'border-[--color-border-primary] hover:border-[--color-border-secondary]'
+          ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-600)]/10'
+          : 'border-[var(--color-border-primary)] hover:border-[var(--color-border-secondary)]'
       }`}
     >
       <div className="flex flex-col items-center gap-2">
-        <div className={`${selected ? 'text-[--color-primary-600]' : 'text-[--color-text-muted]'}`}>
+        <div className={`${selected ? 'text-[var(--color-primary-600)]' : 'text-[var(--color-text-muted)]'}`}>
           {icon}
         </div>
-        <span className={`text-sm font-medium ${selected ? 'text-[--color-primary-600]' : 'text-[--color-text-secondary]'}`}>
+        <span className={`text-sm font-medium ${selected ? 'text-[var(--color-primary-600)]' : 'text-[var(--color-text-secondary)]'}`}>
           {label}
         </span>
       </div>
@@ -431,7 +498,7 @@ function SecurityTab({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
           Password
         </h3>
         <div className="space-y-4 max-w-md">
@@ -466,15 +533,15 @@ function SecurityTab({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      <div className="border-t border-[--color-border-primary] pt-6">
-        <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+      <div className="border-t border-[var(--color-border-primary)] pt-6">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
           Sessions
         </h3>
-        <div className="p-4 rounded-lg bg-[--color-bg-tertiary]">
+        <div className="p-4 rounded-lg bg-[var(--color-bg-tertiary)]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-[--color-text-primary]">Current Session</p>
-              <p className="text-sm text-[--color-text-muted]">
+              <p className="font-medium text-[var(--color-text-primary)]">Current Session</p>
+              <p className="text-sm text-[var(--color-text-muted)]">
                 {navigator.userAgent.includes('Chrome') ? 'Chrome' : 
                  navigator.userAgent.includes('Firefox') ? 'Firefox' :
                  navigator.userAgent.includes('Safari') ? 'Safari' : 'Browser'} on {
@@ -490,15 +557,15 @@ function SecurityTab({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      <div className="border-t border-[--color-border-primary] pt-6">
+      <div className="border-t border-[var(--color-border-primary)] pt-6">
         <h3 className="text-lg font-semibold text-red-400 mb-4">
           Danger Zone
         </h3>
         <div className="p-4 rounded-lg border border-red-500/30 bg-red-500/5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-[--color-text-primary]">Log Out</p>
-              <p className="text-sm text-[--color-text-muted]">
+              <p className="font-medium text-[var(--color-text-primary)]">Log Out</p>
+              <p className="text-sm text-[var(--color-text-muted)]">
                 Sign out of your account on this device
               </p>
             </div>

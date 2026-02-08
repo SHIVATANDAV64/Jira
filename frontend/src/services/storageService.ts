@@ -1,5 +1,5 @@
 import { storage, BUCKETS } from '@/lib/appwrite';
-import { ID } from 'appwrite';
+import { ID, Permission, Role } from 'appwrite';
 import type { ApiResponse } from '@/types';
 
 // Max file size: 10MB
@@ -56,11 +56,16 @@ export async function uploadFile(file: File): Promise<ApiResponse<UploadedFile>>
       return { success: false, error: validationError };
     }
 
-    const result = await storage.createFile({
-      bucketId: BUCKETS.ATTACHMENTS,
-      fileId: ID.unique(),
+    const result = await storage.createFile(
+      BUCKETS.ATTACHMENTS,
+      ID.unique(),
       file,
-    });
+      [
+        Permission.read(Role.any()),
+        Permission.write(Role.users()),
+        Permission.delete(Role.users()),
+      ]
+    );
 
     return {
       success: true,

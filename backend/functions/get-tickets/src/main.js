@@ -91,7 +91,7 @@ export default async function main({ req, res, log, error: logError }) {
   if (body._parseError) {
     return res.json(error('Invalid request body', 400));
   }
-  const { projectId, filters = {} } = body;
+  const { projectId, filters = {}, limit = 100, offset = 0 } = body;
 
   if (!projectId) {
     return res.json(error('Project ID is required'));

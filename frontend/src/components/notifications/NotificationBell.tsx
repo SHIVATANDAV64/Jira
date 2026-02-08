@@ -35,10 +35,10 @@ export function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-[--color-bg-hover] transition-colors"
+        className="relative p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors"
         aria-label="Notifications"
       >
-        <Bell className="h-5 w-5 text-[--color-text-secondary]" />
+        <Bell className="h-5 w-5 text-[var(--color-text-secondary)]" />
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -74,17 +74,17 @@ function NotificationDropdown({ onClose }: NotificationDropdownProps) {
   const hasUnread = unreadNotifications.length > 0;
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] shadow-xl z-50">
+    <div className="absolute right-0 top-full mt-1 w-80 sm:w-96 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-lg z-50">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[--color-border-primary]">
-        <h3 className="font-semibold text-[--color-text-primary]">
+      <div className="flex items-center justify-between p-4 border-b border-[var(--color-border-primary)]">
+        <h3 className="font-semibold text-[var(--color-text-primary)]">
           Notifications
         </h3>
         {hasUnread && (
           <button
             onClick={handleMarkAllAsRead}
             disabled={markAllAsReadMutation.isPending}
-            className="flex items-center gap-1 text-sm text-[--color-primary-600] hover:text-[--color-primary-700] disabled:opacity-50"
+            className="flex items-center gap-1 text-sm text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)] disabled:opacity-50"
           >
             <CheckCheck className="h-4 w-4" />
             Mark all read
@@ -96,13 +96,13 @@ function NotificationDropdown({ onClose }: NotificationDropdownProps) {
       <div className="max-h-96 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-[--color-text-muted]" />
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--color-text-muted)]" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Bell className="h-10 w-10 text-[--color-text-muted] mb-2" />
-            <p className="text-[--color-text-secondary]">No notifications</p>
-            <p className="text-sm text-[--color-text-muted]">
+            <Bell className="h-10 w-10 text-[var(--color-text-muted)] mb-2" />
+            <p className="text-[var(--color-text-secondary)]">No notifications</p>
+            <p className="text-sm text-[var(--color-text-muted)]">
               You're all caught up!
             </p>
           </div>
@@ -121,11 +121,11 @@ function NotificationDropdown({ onClose }: NotificationDropdownProps) {
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="p-3 border-t border-[--color-border-primary]">
+        <div className="p-3 border-t border-[var(--color-border-primary)]">
           <Link
             to="/notifications"
             onClick={onClose}
-            className="block text-center text-sm text-[--color-primary-600] hover:text-[--color-primary-700]"
+            className="block text-center text-sm text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)]"
           >
             View all notifications
           </Link>
@@ -174,15 +174,15 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
 
   const content = (
     <div
-      className={`relative flex items-start gap-3 p-4 hover:bg-[--color-bg-hover] transition-colors ${
-        !notification.read ? 'bg-[--color-primary-600]/5' : ''
+      className={`relative flex items-start gap-3 p-4 hover:bg-[var(--color-bg-hover)] transition-colors ${
+        !notification.read ? 'bg-[var(--color-primary-600)]/5' : ''
       }`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       {/* Unread indicator */}
       {!notification.read && (
-        <div className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[--color-primary-500]" />
+        <div className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-primary-500)]" />
       )}
 
       {/* Icon */}
@@ -192,13 +192,13 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-[--color-text-primary] text-sm">
+        <p className="font-medium text-[var(--color-text-primary)] text-sm">
           {notification.title}
         </p>
-        <p className="text-sm text-[--color-text-secondary] line-clamp-2">
+        <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2">
           {notification.message}
         </p>
-        <p className="text-xs text-[--color-text-muted] mt-1">
+        <p className="text-xs text-[var(--color-text-muted)] mt-1">
           {formatNotificationTime(notification.$createdAt)}
         </p>
       </div>
@@ -209,18 +209,18 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
           {!notification.read && (
             <button
               onClick={handleMarkRead}
-              className="p-1 rounded hover:bg-[--color-bg-tertiary]"
+              className="p-1 rounded hover:bg-[var(--color-bg-tertiary)]"
               title="Mark as read"
             >
-              <Check className="h-4 w-4 text-[--color-text-muted]" />
+              <Check className="h-4 w-4 text-[var(--color-text-muted)]" />
             </button>
           )}
           <button
             onClick={handleDelete}
-            className="p-1 rounded hover:bg-[--color-bg-tertiary]"
+            className="p-1 rounded hover:bg-[var(--color-bg-tertiary)]"
             title="Delete"
           >
-            <Trash2 className="h-4 w-4 text-[--color-text-muted]" />
+            <Trash2 className="h-4 w-4 text-[var(--color-text-muted)]" />
           </button>
         </div>
       )}

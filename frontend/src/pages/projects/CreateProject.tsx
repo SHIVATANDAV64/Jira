@@ -56,8 +56,8 @@ export function CreateProject() {
 
     if (!formData.key.trim()) {
       newErrors.key = 'Project key is required';
-    } else if (!/^[A-Z]+$/.test(formData.key)) {
-      newErrors.key = 'Project key must contain only uppercase letters';
+    } else if (!/^[A-Z][A-Z0-9]*$/.test(formData.key)) {
+      newErrors.key = 'Project key must start with a letter and contain only uppercase letters and numbers';
     } else if (formData.key.length < 2) {
       newErrors.key = 'Project key must be at least 2 characters';
     } else if (formData.key.length > 5) {
@@ -86,7 +86,7 @@ export function CreateProject() {
   };
 
   const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const key = e.target.value.toUpperCase();
+    const key = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     setFormData((prev) => ({
       ...prev,
       key: key.substring(0, 5),
@@ -123,20 +123,17 @@ export function CreateProject() {
       {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-[--color-text-secondary] hover:text-[--color-text-primary] mb-6 cursor-pointer"
+        className="flex items-center gap-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] mb-4 cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" />
         Back
       </button>
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[--color-text-primary]">
-          Create a new project
+      <div className="mb-4">
+        <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
+          Create project
         </h1>
-        <p className="mt-1 text-[--color-text-secondary]">
-          Set up a new project to start tracking bugs and issues
-        </p>
       </div>
 
       {/* Form */}
@@ -147,7 +144,7 @@ export function CreateProject() {
           </div>
         )}
 
-        <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6 space-y-6">
+        <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-6 space-y-6">
           <div>
             <Input
               label="Project name"
@@ -187,7 +184,7 @@ export function CreateProject() {
             {errors.description && (
               <p className="mt-1 text-sm text-red-600">{errors.description}</p>
             )}
-            <p className="mt-1 text-xs text-[--color-text-muted]">
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               {formData.description.length}/2000 characters
             </p>
           </div>

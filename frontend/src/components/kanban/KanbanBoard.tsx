@@ -24,11 +24,14 @@ interface KanbanBoardProps {
   tickets: Ticket[];
   projectKey: string;
   onTicketMove: (ticketId: string, newStatus: TicketStatus, newOrder: number) => void;
+  onTicketEdit?: (ticket: Ticket) => void;
+  onTicketDelete?: (ticketId: string) => void;
+  onTicketAssign?: (ticketId: string) => void;
   members?: ProjectMember[];
   hasActiveFilters?: boolean;
 }
 
-export function KanbanBoard({ tickets, projectKey, onTicketMove, members = [], hasActiveFilters = false }: KanbanBoardProps) {
+export function KanbanBoard({ tickets, projectKey, onTicketMove, onTicketEdit, onTicketDelete, onTicketAssign, members = [], hasActiveFilters = false }: KanbanBoardProps) {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const { permissions } = usePermissions(members);
 
@@ -127,9 +130,9 @@ export function KanbanBoard({ tickets, projectKey, onTicketMove, members = [], h
     >
       {/* TKT-30: Show message when filters result in no tickets */}
       {allColumnsEmpty && hasActiveFilters && (
-        <div className="text-center py-12 mb-4 rounded-xl border border-dashed border-[--color-border-primary] bg-[--color-bg-secondary]">
-          <p className="text-[--color-text-muted] text-sm">No tickets match your current filters.</p>
-          <p className="text-[--color-text-muted] text-xs mt-1">Try adjusting or clearing your filters.</p>
+        <div className="text-center py-12 mb-4 rounded-lg border border-dashed border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+          <p className="text-[var(--color-text-muted)] text-sm">No tickets match your current filters.</p>
+          <p className="text-[var(--color-text-muted)] text-xs mt-1">Try adjusting or clearing your filters.</p>
         </div>
       )}
       <div className="flex gap-4 overflow-x-auto pb-4">
@@ -153,10 +156,14 @@ export function KanbanBoard({ tickets, projectKey, onTicketMove, members = [], h
                       key={ticket.$id}
                       ticket={ticket}
                       projectKey={projectKey}
+                      onEdit={onTicketEdit}
+                      onDelete={onTicketDelete}
+                      onStatusChange={(ticketId, newStatus) => onTicketMove(ticketId, newStatus, 0)}
+                      onAssign={onTicketAssign}
                     />
                   ))
                 ) : (
-                  <div className="text-center py-8 text-[--color-text-muted]">
+                  <div className="text-center py-8 text-[var(--color-text-muted)]">
                     <p className="text-sm">No tickets to display</p>
                   </div>
                 )}

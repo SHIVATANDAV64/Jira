@@ -14,8 +14,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // AUTH-24: Show loading spinner instead of blank flash
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[--color-bg-primary]">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+      <div className="flex h-screen items-center justify-center bg-[var(--color-bg-primary)]">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }

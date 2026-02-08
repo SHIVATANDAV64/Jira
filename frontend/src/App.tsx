@@ -23,10 +23,10 @@ const NotificationsPage = lazy(() => import('@/pages/notifications/Notifications
 function NotFoundPage() {
   return (
     <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
-      <h1 className="text-6xl font-bold text-[--color-text-muted]">404</h1>
-      <p className="text-lg text-[--color-text-secondary]">Page not found</p>
-      <p className="text-sm text-[--color-text-muted]">The page you're looking for doesn't exist or has been moved.</p>
-      <a href="/dashboard" className="mt-4 rounded-lg bg-[--color-primary-600] px-4 py-2 text-sm font-medium text-white hover:bg-[--color-primary-500]">Go to Dashboard</a>
+      <h1 className="text-6xl font-bold text-[var(--color-text-muted)]">404</h1>
+      <p className="text-lg text-[var(--color-text-secondary)]">Page not found</p>
+      <p className="text-sm text-[var(--color-text-muted)]">The page you're looking for doesn't exist or has been moved.</p>
+      <a href="/dashboard" className="mt-4 rounded-lg bg-[var(--color-primary-600)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-500)]">Go to Dashboard</a>
     </div>
   );
 }
@@ -35,7 +35,7 @@ function NotFoundPage() {
 function PageLoader() {
   return (
     <div className="flex h-64 items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+      <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
     </div>
   );
 }
@@ -43,10 +43,10 @@ function PageLoader() {
 // Full page loading screen (for initial auth check)
 function FullPageLoader() {
   return (
-    <div className="flex h-screen items-center justify-center bg-[--color-bg-primary]">
+    <div className="flex h-screen items-center justify-center bg-[var(--color-bg-primary)]">
       <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
-        <p className="text-[--color-text-secondary]">Loading...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
+        <p className="text-[var(--color-text-secondary)]">Loading...</p>
       </div>
     </div>
   );

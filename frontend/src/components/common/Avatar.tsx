@@ -4,6 +4,7 @@ import { clsx } from 'clsx';
 interface AvatarProps {
   userId?: string;
   name: string;
+  avatarId?: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   showStatus?: boolean;
@@ -29,7 +30,7 @@ const statusSizes = {
   lg: 'h-3 w-3 border-2',
 };
 
-export function Avatar({ userId, name, size = 'md', className, showStatus, status = 'offline' }: AvatarProps) {
+export function Avatar({ userId, name, avatarId, size = 'md', className, showStatus, status = 'offline' }: AvatarProps) {
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -41,30 +42,26 @@ export function Avatar({ userId, name, size = 'md', className, showStatus, statu
     <div
       className={clsx(
         'relative flex items-center justify-center rounded-full font-medium text-white overflow-hidden',
-        'bg-gradient-to-br from-[--color-primary-500] to-[--color-primary-700]',
-        'ring-2 ring-[--color-bg-primary]/50',
-        'transition-transform duration-150 hover:scale-105',
+        'bg-[var(--color-primary-600)]',
         sizeStyles[size],
         className
       )}
     >
-      {userId && (
-        <img
-          src={getAvatarUrl(userId, name)}
-          alt={name}
-          className="absolute inset-0 h-full w-full object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      )}
-      <span className="relative z-10 drop-shadow-sm">{initials}</span>
+      <span className="drop-shadow-sm font-medium">{initials}</span>
+      <img
+        src={getAvatarUrl(userId || '', name, avatarId)}
+        alt={name}
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
       
       {/* Status indicator */}
       {showStatus && (
         <span
           className={clsx(
-            'absolute bottom-0 right-0 rounded-full border-[--color-bg-primary]',
+            'absolute bottom-0 right-0 rounded-full border-[var(--color-bg-primary)]',
             statusColors[status],
             statusSizes[size],
             status === 'online' && 'animate-pulse-subtle'
@@ -93,13 +90,13 @@ export function AvatarGroup({ users, max = 3, size = 'sm' }: AvatarGroupProps) {
           userId={user.$id}
           name={user.name}
           size={size}
-          className="ring-2 ring-[--color-bg-primary]"
+          className="ring-2 ring-[var(--color-bg-primary)]"
         />
       ))}
       {remaining > 0 && (
         <div
           className={clsx(
-            'flex items-center justify-center rounded-full bg-[--color-bg-tertiary] text-[--color-text-secondary] ring-2 ring-[--color-bg-primary]',
+            'flex items-center justify-center rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] ring-2 ring-[var(--color-bg-primary)]',
             sizeStyles[size]
           )}
         >

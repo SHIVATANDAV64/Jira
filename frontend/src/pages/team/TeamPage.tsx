@@ -92,7 +92,7 @@ function InviteMemberModal({ isOpen, onClose, projectId, inviterRole = 'admin' }
           onChange={(e) => setRole(e.target.value as ProjectRole)}
           options={roleOptions}
         />
-        <p className="text-sm text-[--color-text-muted]">
+        <p className="text-sm text-[var(--color-text-muted)]">
           {PROJECT_ROLES[role].description}
         </p>
         <div className="flex justify-end gap-3 pt-4">
@@ -168,19 +168,19 @@ function MemberRow({ member, projectId, currentUserId, isAdmin, currentUserRole 
     : allRoleOptions;
 
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-[--color-bg-hover] rounded-lg transition-colors">
+    <div className="flex items-center justify-between p-4 hover:bg-[var(--color-bg-hover)] rounded-lg transition-colors">
       <div className="flex items-center gap-3">
         <Avatar name={member.user?.name || 'User'} size="md" />
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-[--color-text-primary]">
+            <span className="font-medium text-[var(--color-text-primary)]">
               {member.user?.name || 'Unknown User'}
             </span>
             {isCurrentUser && (
               <Badge variant="info" size="sm">You</Badge>
             )}
           </div>
-          <div className="flex items-center gap-1 text-sm text-[--color-text-muted]">
+          <div className="flex items-center gap-1 text-sm text-[var(--color-text-muted)]">
             <Mail className="h-3 w-3" />
             {member.user?.email || 'No email'}
           </div>
@@ -200,15 +200,15 @@ function MemberRow({ member, projectId, currentUserId, isAdmin, currentUserRole 
             onClick={() => canModify && setShowRoleSelect(true)}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${
               canModify
-                ? 'hover:bg-[--color-bg-tertiary] cursor-pointer'
+                ? 'hover:bg-[var(--color-bg-tertiary)] cursor-pointer'
                 : 'cursor-default'
             }`}
           >
-            <Shield className="h-4 w-4 text-[--color-text-muted]" />
-            <span className="text-[--color-text-secondary]">
+            <Shield className="h-4 w-4 text-[var(--color-text-muted)]" />
+            <span className="text-[var(--color-text-secondary)]">
               {PROJECT_ROLES[member.role].label}
             </span>
-            {canModify && <ChevronDown className="h-3 w-3 text-[--color-text-muted]" />}
+            {canModify && <ChevronDown className="h-3 w-3 text-[var(--color-text-muted)]" />}
           </button>
         )}
 
@@ -216,9 +216,9 @@ function MemberRow({ member, projectId, currentUserId, isAdmin, currentUserRole 
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 rounded-lg hover:bg-[--color-bg-tertiary] cursor-pointer"
+              className="p-2 rounded-lg hover:bg-[var(--color-bg-tertiary)] cursor-pointer"
             >
-              <MoreVertical className="h-4 w-4 text-[--color-text-muted]" />
+              <MoreVertical className="h-4 w-4 text-[var(--color-text-muted)]" />
             </button>
             {showMenu && (
               <>
@@ -226,10 +226,10 @@ function MemberRow({ member, projectId, currentUserId, isAdmin, currentUserRole 
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-lg border border-[--color-border-primary] bg-[--color-bg-secondary] shadow-lg py-1">
+                <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-lg py-1">
                   <button
                     onClick={handleRemove}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-[--color-bg-hover] cursor-pointer"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-[var(--color-bg-hover)] cursor-pointer"
                   >
                     <Trash2 className="h-4 w-4" />
                     Remove from project
@@ -302,7 +302,7 @@ export function TeamPage() {
   if (projectsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }
@@ -310,11 +310,11 @@ export function TeamPage() {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
-        <FolderKanban className="h-16 w-16 text-[--color-text-muted] mb-4" />
-        <h2 className="text-xl font-semibold text-[--color-text-primary] mb-2">
+        <FolderKanban className="h-16 w-16 text-[var(--color-text-muted)] mb-4" />
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
           No Projects Yet
         </h2>
-        <p className="text-[--color-text-secondary] mb-4">
+        <p className="text-[var(--color-text-secondary)] mb-4">
           Create a project first to manage team members
         </p>
         <Link to="/projects/new">
@@ -331,8 +331,8 @@ export function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[--color-text-primary]">Team Management</h1>
-          <p className="mt-1 text-[--color-text-secondary]">
+          <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">Team</h1>
+          <p className="mt-1 text-[var(--color-text-secondary)]">
             Manage team members and their roles across projects
           </p>
         </div>
@@ -357,7 +357,7 @@ export function TeamPage() {
           />
         </div>
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[--color-text-muted]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)]" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -369,17 +369,17 @@ export function TeamPage() {
 
       {/* Project Info */}
       {selectedProject && (
-        <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-4">
+        <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[--color-primary-100] text-[--color-primary-600] font-bold">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[var(--color-primary-100)] text-[var(--color-primary-600)] font-bold">
                 {selectedProject.key}
               </div>
               <div>
-                <h2 className="font-semibold text-[--color-text-primary]">
+                <h2 className="font-semibold text-[var(--color-text-primary)]">
                   {selectedProject.name}
                 </h2>
-                <p className="text-sm text-[--color-text-muted]">
+                <p className="text-sm text-[var(--color-text-muted)]">
                   {members.length} member{members.length !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -387,7 +387,7 @@ export function TeamPage() {
             <div className="flex items-center gap-2">
               <Link
                 to={`/projects/${selectedProject.$id}`}
-                className="text-sm text-[--color-primary-600] hover:text-[--color-primary-700]"
+                className="text-sm text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)]"
               >
                 View Project
               </Link>
@@ -400,29 +400,29 @@ export function TeamPage() {
       )}
 
       {/* Members List */}
-      <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary]">
-        <div className="border-b border-[--color-border-primary] px-4 py-3">
+      <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+        <div className="border-b border-[var(--color-border-primary)] px-4 py-3">
           <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-[--color-text-muted]" />
-            <h3 className="font-medium text-[--color-text-primary]">Team Members</h3>
+            <Users className="h-5 w-5 text-[var(--color-text-muted)]" />
+            <h3 className="font-medium text-[var(--color-text-primary)]">Team Members</h3>
           </div>
         </div>
 
         {membersLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
           </div>
         ) : filteredMembers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             {searchQuery ? (
               <>
-                <AlertCircle className="h-12 w-12 text-[--color-text-muted] mb-3" />
-                <p className="text-[--color-text-secondary]">No members match your search</p>
+                <AlertCircle className="h-12 w-12 text-[var(--color-text-muted)] mb-3" />
+                <p className="text-[var(--color-text-secondary)]">No members match your search</p>
               </>
             ) : (
               <>
-                <Users className="h-12 w-12 text-[--color-text-muted] mb-3" />
-                <p className="text-[--color-text-secondary]">No team members yet</p>
+                <Users className="h-12 w-12 text-[var(--color-text-muted)] mb-3" />
+                <p className="text-[var(--color-text-secondary)]">No team members yet</p>
                 {isAdmin && (
                   <Button
                     variant="secondary"
@@ -437,7 +437,7 @@ export function TeamPage() {
             )}
           </div>
         ) : (
-          <div className="divide-y divide-[--color-border-primary]">
+          <div className="divide-y divide-[var(--color-border-primary)]">
             {filteredMembers.map((member) => (
               <MemberRow
                 key={member.$id}
@@ -453,16 +453,16 @@ export function TeamPage() {
       </div>
 
       {/* Role Legend */}
-      <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-4">
-        <h3 className="font-medium text-[--color-text-primary] mb-3">Role Permissions</h3>
+      <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-4">
+        <h3 className="font-medium text-[var(--color-text-primary)] mb-3">Role Permissions</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(PROJECT_ROLES).map(([role, config]) => (
-            <div key={role} className="p-3 rounded-lg bg-[--color-bg-tertiary]">
+            <div key={role} className="p-3 rounded-lg bg-[var(--color-bg-tertiary)]">
               <div className="flex items-center gap-2 mb-1">
-                <Shield className="h-4 w-4 text-[--color-primary-600]" />
-                <span className="font-medium text-[--color-text-primary]">{config.label}</span>
+                <Shield className="h-4 w-4 text-[var(--color-primary-600)]" />
+                <span className="font-medium text-[var(--color-text-primary)]">{config.label}</span>
               </div>
-              <p className="text-xs text-[--color-text-muted]">{config.description}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{config.description}</p>
             </div>
           ))}
         </div>

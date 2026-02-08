@@ -101,7 +101,7 @@ export function FilterBar({ filters, onFiltersChange, members }: FilterBarProps)
       {/* Search and Filter Toggle */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[--color-text-muted]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-muted)]" />
           <Input
             value={searchValue}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -135,7 +135,7 @@ export function FilterBar({ filters, onFiltersChange, members }: FilterBarProps)
 
       {/* Expanded Filters */}
       {showFilters && (
-        <div className="p-4 rounded-lg border border-[--color-border-primary] bg-[--color-bg-secondary] space-y-4">
+        <div className="p-4 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] space-y-4">
           {/* Status Filter */}
           <FilterSection title="Status">
             <div className="flex flex-wrap gap-2">
@@ -297,7 +297,7 @@ interface FilterSectionProps {
 function FilterSection({ title, children }: FilterSectionProps) {
   return (
     <div>
-      <h4 className="text-sm font-medium text-[--color-text-secondary] mb-2">{title}</h4>
+      <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">{title}</h4>
       {children}
     </div>
   );
@@ -315,8 +315,8 @@ function FilterChip({ label, selected, onClick }: FilterChipProps) {
       onClick={onClick}
       className={`px-3 py-1.5 text-sm rounded-lg border transition-colors cursor-pointer ${
         selected
-          ? 'bg-[--color-primary-600] border-[--color-primary-600] text-white'
-          : 'border-[--color-border-primary] text-[--color-text-secondary] hover:border-[--color-border-secondary] hover:text-[--color-text-primary]'
+          ? 'bg-[var(--color-primary-600)] border-[var(--color-primary-600)] text-white'
+          : 'border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-secondary)] hover:text-[var(--color-text-primary)]'
       }`}
     >
       {label}

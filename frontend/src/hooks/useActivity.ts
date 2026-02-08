@@ -252,7 +252,7 @@ export function formatActivityAction(activity: ActivityLog): string {
     case 'member_role_changed':
       return `changed ${details.memberName || "member's"} role to ${details.newRole || 'Unknown'}`;
     case 'project_created':
-      return `created project "${details.projectName || 'Unknown'}"`;
+      return `created project "${details.projectName || details.name || 'Unknown'}"`;
     case 'project_updated':
       return 'updated project settings';
     case 'sprint_created':

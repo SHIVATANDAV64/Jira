@@ -40,7 +40,7 @@ export function ProjectsList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }
@@ -49,104 +49,99 @@ export function ProjectsList() {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-[--color-text-primary] mb-2">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
           Failed to load projects
         </h2>
-        <p className="text-[--color-text-secondary]">{error}</p>
+        <p className="text-[var(--color-text-secondary)]">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[--color-text-primary]">
-            Projects
-          </h1>
-          <p className="mt-1 text-[--color-text-secondary]">
-            Manage and track all your projects
-          </p>
-        </div>
+        <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
+          Projects
+        </h1>
         <Link to="/projects/new">
-          <Button leftIcon={<Plus className="h-4 w-4" />}>
-            New Project
+          <Button size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+            Create project
           </Button>
         </Link>
       </div>
 
       {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[--color-text-muted]" />
+      <div className="relative max-w-xs">
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
         <Input
           type="text"
           placeholder="Search projects..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="pl-8"
         />
       </div>
 
       {/* Projects grid */}
       {filteredProjects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <FolderKanban className="h-16 w-16 text-[--color-text-muted] mb-4" />
-          <h2 className="text-xl font-semibold text-[--color-text-primary] mb-2">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <FolderKanban className="h-10 w-10 text-[var(--color-text-muted)] mb-3" />
+          <h2 className="text-base font-medium text-[var(--color-text-primary)] mb-1">
             {searchQuery ? 'No projects found' : 'No projects yet'}
           </h2>
-          <p className="text-[--color-text-secondary] mb-6 max-w-md">
+          <p className="text-sm text-[var(--color-text-muted)] mb-4 max-w-sm">
             {searchQuery
               ? 'Try a different search term'
-              : 'Create your first project to start tracking bugs and issues with your team.'}
+              : 'Create a project to get started.'}
           </p>
           {!searchQuery && (
             <Link to="/projects/new">
-              <Button leftIcon={<Plus className="h-4 w-4" />}>
-                Create your first project
+              <Button size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                Create project
               </Button>
             </Link>
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filteredProjects.map((project) => (
             <div
               key={project.$id}
-              className="group relative cursor-pointer rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-6 transition-colors hover:border-[--color-primary-500]"
+              className="group relative rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-4 hover:border-[var(--color-border-secondary)] transition-colors"
             >
               <Link to={`/projects/${project.$id}`} className="block">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[--color-primary-100] text-[--color-primary-600] font-bold text-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] font-semibold text-xs">
                       {project.key}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-[--color-text-primary] group-hover:text-[--color-primary-600]">
+                      <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
                         {project.name}
                       </h3>
-                      <p className="text-sm text-[--color-text-muted]">
+                      <p className="text-xs text-[var(--color-text-muted)]">
                         {project.key}
                       </p>
                     </div>
                   </div>
                 </div>
                 {project.description && (
-                  <p className="mt-3 text-sm text-[--color-text-secondary] line-clamp-2">
+                  <p className="mt-2 text-xs text-[var(--color-text-secondary)] line-clamp-2">
                     {project.description}
                   </p>
                 )}
-                <div className="mt-4 flex items-center gap-4 text-sm text-[--color-text-muted]">
-                  <span className={project.status === 'archived' ? 'text-yellow-500' : ''}>
+                <div className="mt-3 text-xs text-[var(--color-text-muted)]">
+                  <span className={project.status === 'archived' ? 'text-amber-600' : 'text-green-700'}>
                     {project.status === 'archived' ? 'Archived' : 'Active'}
                   </span>
                 </div>
               </Link>
 
               {/* Menu button */}
-              <div className="absolute top-6 right-6">
+              <div className="absolute top-4 right-4">
                 <button
-                  className="cursor-pointer rounded p-1 text-[--color-text-muted] hover:bg-[--color-bg-hover]"
+                  className="cursor-pointer rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]"
                   onClick={(e) => {
                     e.preventDefault();
                     setOpenMenuId(openMenuId === project.$id ? null : project.$id);
@@ -155,12 +150,11 @@ export function ProjectsList() {
                   <MoreVertical className="h-4 w-4" />
                 </button>
 
-                {/* Dropdown menu */}
                 {openMenuId === project.$id && (
-                  <div className="absolute right-0 top-8 z-10 w-48 rounded-lg border border-[--color-border-primary] bg-[--color-bg-secondary] py-1 shadow-lg">
+                  <div className="absolute right-0 top-7 z-10 w-40 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] py-1 shadow-lg">
                     {permissions.canEditProject && (
                       <button
-                        className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[--color-text-secondary] hover:bg-[--color-bg-hover] disabled:opacity-50"
+                        className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
                         onClick={() => handleArchive(project.$id, project.status === 'archived')}
                         disabled={archiveMutation.isPending || restoreMutation.isPending}
                       >
@@ -170,7 +164,7 @@ export function ProjectsList() {
                     )}
                     {permissions.canDeleteProject && (
                       <button
-                        className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-[--color-bg-hover] disabled:opacity-50"
+                        className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
                         onClick={() => setDeleteConfirmId(project.$id)}
                         disabled={deleteMutation.isPending}
                       >
@@ -201,7 +195,7 @@ export function ProjectsList() {
         title="Delete Project"
       >
         <div className="space-y-4">
-          <p className="text-[--color-text-secondary]">
+          <p className="text-[var(--color-text-secondary)]">
             Are you sure you want to permanently delete this project? This action cannot be undone.
           </p>
           <div className="flex justify-end gap-3">

@@ -37,8 +37,8 @@ interface BadgeProps {
 }
 
 const variantStyles = {
-  default: 'bg-[--color-bg-tertiary] text-[--color-text-secondary]',
-  outline: 'border border-[--color-border-primary] text-[--color-text-secondary]',
+  default: 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]',
+  outline: 'border border-[var(--color-border-primary)] text-[var(--color-text-secondary)]',
   info: 'bg-blue-50 text-blue-700',
   success: 'bg-green-50 text-green-700',
   warning: 'bg-amber-50 text-amber-700',

@@ -84,23 +84,23 @@ export function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[--color-bg-primary] px-4">
-      <div className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--color-bg-primary)] px-4">
+      <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="mb-8 flex items-center justify-center gap-2">
-          <Bug className="h-10 w-10 text-[--color-primary-500]" />
-          <span className="text-2xl font-bold text-[--color-text-primary]">
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <Bug className="h-7 w-7 text-[var(--color-primary-600)]" />
+          <span className="text-lg font-bold text-[var(--color-text-primary)]">
             BugTracker
           </span>
         </div>
 
         {/* Card */}
-        <div className="rounded-xl border border-[--color-border-primary] bg-[--color-bg-secondary] p-8">
-          <h1 className="mb-2 text-2xl font-bold text-[--color-text-primary]">
-            Create an account
+        <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-6">
+          <h1 className="mb-1 text-lg font-semibold text-[var(--color-text-primary)]">
+            Create account
           </h1>
-          <p className="mb-6 text-[--color-text-secondary]">
-            Get started with BugTracker today
+          <p className="mb-5 text-sm text-[var(--color-text-muted)]">
+            to start using BugTracker
           </p>
 
           {error && (
@@ -137,7 +137,7 @@ export function Register() {
               required
             />
 
-            <div className="text-xs space-y-1 text-[--color-text-tertiary]">
+            <div className="text-xs space-y-1 text-[var(--color-text-tertiary)]">
               <p className={password.length >= 8 ? 'text-green-500' : ''}>
                 {password.length >= 8 ? '✓' : '○'} At least 8 characters
               </p>
@@ -171,9 +171,9 @@ export function Register() {
           </form>
 
           <div className="my-6 flex items-center gap-4">
-            <div className="h-px flex-1 bg-[--color-border-primary]" />
-            <span className="text-sm text-[--color-text-muted]">or</span>
-            <div className="h-px flex-1 bg-[--color-border-primary]" />
+            <div className="h-px flex-1 bg-[var(--color-border-primary)]" />
+            <span className="text-sm text-[var(--color-text-muted)]">or</span>
+            <div className="h-px flex-1 bg-[var(--color-border-primary)]" />
           </div>
 
           <Button
@@ -203,11 +203,11 @@ export function Register() {
             Continue with Google
           </Button>
 
-          <p className="mt-6 text-center text-sm text-[--color-text-secondary]">
+          <p className="mt-6 text-center text-sm text-[var(--color-text-secondary)]">
             Already have an account?{' '}
             <Link
               to="/login"
-              className="font-medium text-[--color-primary-600] hover:text-[--color-primary-700]"
+              className="font-medium text-[var(--color-primary-600)] hover:text-[var(--color-primary-700)]"
             >
               Sign in
             </Link>

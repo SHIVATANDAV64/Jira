@@ -1,20 +1,50 @@
+import { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { Paperclip, Calendar } from 'lucide-react';
+import {
+  Paperclip,
+  Calendar,
+  MoreHorizontal,
+  Edit2,
+  Trash2,
+  ArrowRight,
+  UserPlus,
+  ExternalLink,
+  Copy,
+} from 'lucide-react';
 import { format } from 'date-fns';
-import { PriorityBadge, TypeBadge } from '@/components/common/Badge';
+import { PriorityBadge, TypeBadge, StatusBadge } from '@/components/common/Badge';
 import { Avatar } from '@/components/common/Avatar';
-import type { Ticket } from '@/types';
+import { TICKET_STATUS_ORDER } from '@/lib/constants';
+import type { Ticket, TicketStatus } from '@/types';
 
 interface TicketCardProps {
   ticket: Ticket;
   projectKey: string;
   isDragging?: boolean;
+  onEdit?: (ticket: Ticket) => void;
+  onDelete?: (ticketId: string) => void;
+  onStatusChange?: (ticketId: string, status: TicketStatus) => void;
+  onAssign?: (ticketId: string) => void;
+  showContextMenu?: boolean;
 }
 
-export function TicketCard({ ticket, projectKey, isDragging }: TicketCardProps) {
+export function TicketCard({
+  ticket,
+  projectKey,
+  isDragging,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  onAssign,
+  showContextMenu = true,
+}: TicketCardProps) {
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [statusSubmenuOpen, setStatusSubmenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const {
     attributes,
     listeners,
@@ -31,47 +61,206 @@ export function TicketCard({ ticket, projectKey, isDragging }: TicketCardProps) 
 
   const ticketKey = `${projectKey}-${ticket.ticketNumber}`;
 
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setStatusSubmenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
+
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen(!menuOpen);
+    setStatusSubmenuOpen(false);
+  };
+
+  const handleAction = (e: React.MouseEvent, action: () => void) => {
+    e.preventDefault();
+    e.stopPropagation();
+    action();
+    setMenuOpen(false);
+    setStatusSubmenuOpen(false);
+  };
+
+  const handleCopyKey = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigator.clipboard.writeText(ticketKey);
+    setMenuOpen(false);
+  };
+
   return (
-    <Link
-      to={`tickets/${ticket.$id}`}
+    <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
       className={clsx(
-        'block rounded-lg border bg-[--color-bg-primary] p-3',
-        'transition-all duration-200 ease-out',
+        'group relative block rounded-md border bg-[var(--color-bg-secondary)] p-3',
+        'transition-shadow',
         isDragging || isSortableDragging
-          ? 'border-[--color-primary-500] shadow-xl shadow-[--color-primary-500]/20 opacity-95 scale-[1.02] rotate-1'
-          : 'border-[--color-border-primary] hover:border-[--color-primary-500]/50 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20'
+          ? 'border-[var(--color-primary-500)] shadow-lg opacity-90'
+          : 'border-[var(--color-border-primary)] hover:shadow-md'
       )}
     >
+      {/* Click handler for the card body */}
+      <Link
+        to={`tickets/${ticket.$id}`}
+        className="absolute inset-0 z-0 rounded-lg"
+        aria-label={`Open ticket ${ticketKey}`}
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-[--color-text-muted]">
+      <div className="relative z-10 flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-[var(--color-text-muted)]">
           {ticketKey}
         </span>
-        <TypeBadge type={ticket.type} />
+        <div className="flex items-center gap-1">
+          <TypeBadge type={ticket.type} />
+          {/* 3-dot context menu */}
+          {showContextMenu && (
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={handleMenuClick}
+                className={clsx(
+                  'p-1 rounded-md transition-all cursor-pointer',
+                  menuOpen
+                    ? 'bg-[var(--color-bg-hover)] text-[var(--color-text-primary)]'
+                    : 'opacity-0 group-hover:opacity-100 hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                )}
+                aria-label="Ticket actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-lg py-1">
+                  {/* Open in new view */}
+                  <button
+                    onClick={(e) => handleAction(e, () => navigate(`tickets/${ticket.$id}`))}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open ticket
+                  </button>
+
+                  {/* Copy ticket key */}
+                  <button
+                    onClick={handleCopyKey}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Copy ticket key
+                  </button>
+
+                  <div className="my-1 border-t border-[var(--color-border-primary)]" />
+
+                  {/* Change status */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setStatusSubmenuOpen(!statusSubmenuOpen);
+                      }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <ArrowRight className="h-3.5 w-3.5" />
+                        Move to
+                      </span>
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                    {statusSubmenuOpen && (
+                      <div className="absolute left-full top-0 ml-1 w-36 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] shadow-lg py-1">
+                        {TICKET_STATUS_ORDER.filter((s) => s !== ticket.status).map((status) => (
+                          <button
+                            key={status}
+                            onClick={(e) =>
+                              handleAction(e, () => {
+                                if (onStatusChange) onStatusChange(ticket.$id, status);
+                              })
+                            }
+                            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                          >
+                            <StatusBadge status={status} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Assign */}
+                  {onAssign && (
+                    <button
+                      onClick={(e) => handleAction(e, () => onAssign(ticket.$id))}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      {ticket.assigneeId ? 'Reassign' : 'Assign'}
+                    </button>
+                  )}
+
+                  {/* Edit */}
+                  {onEdit && (
+                    <>
+                      <div className="my-1 border-t border-[var(--color-border-primary)]" />
+                      <button
+                        onClick={(e) => handleAction(e, () => onEdit(ticket))}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] cursor-pointer"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Edit ticket
+                      </button>
+                    </>
+                  )}
+
+                  {/* Delete */}
+                  {onDelete && (
+                    <button
+                      onClick={(e) => handleAction(e, () => {
+                        if (confirm('Are you sure you want to delete this ticket?')) {
+                          onDelete(ticket.$id);
+                        }
+                      })}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete ticket
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Title */}
-      <h4 className="text-sm font-medium text-[--color-text-primary] mb-2 line-clamp-2">
+      <h4 className="relative z-10 text-sm font-medium text-[var(--color-text-primary)] mb-2 line-clamp-2">
         {ticket.title}
       </h4>
 
       {/* Labels */}
       {ticket.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="relative z-10 flex flex-wrap gap-1 mb-2">
           {ticket.labels.slice(0, 3).map((label) => (
             <span
               key={label}
-              className="rounded bg-[--color-bg-tertiary] px-1.5 py-0.5 text-xs text-[--color-text-muted]"
+              className="rounded bg-[var(--color-bg-tertiary)] px-1.5 py-0.5 text-xs text-[var(--color-text-muted)]"
             >
               {label}
             </span>
           ))}
           {ticket.labels.length > 3 && (
-            <span className="text-xs text-[--color-text-muted]">
+            <span className="text-xs text-[var(--color-text-muted)]">
               +{ticket.labels.length - 3}
             </span>
           )}
@@ -79,11 +268,11 @@ export function TicketCard({ ticket, projectKey, isDragging }: TicketCardProps) 
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-[--color-border-primary]">
+      <div className="relative z-10 flex items-center justify-between pt-2 border-t border-[var(--color-border-primary)]">
         <div className="flex items-center gap-2">
           <PriorityBadge priority={ticket.priority} />
           {ticket.dueDate && (
-            <span className="flex items-center gap-1 text-xs text-[--color-text-muted]">
+            <span className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
               <Calendar className="h-3 w-3" />
               {format(new Date(ticket.dueDate), 'MMM d')}
             </span>
@@ -93,7 +282,7 @@ export function TicketCard({ ticket, projectKey, isDragging }: TicketCardProps) 
         <div className="flex items-center gap-2">
           {/* Attachments placeholder */}
           {ticket.attachments && ticket.attachments.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-[--color-text-muted]">
+            <span className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
               <Paperclip className="h-3 w-3" />
               {ticket.attachments.length}
             </span>
@@ -109,6 +298,6 @@ export function TicketCard({ ticket, projectKey, isDragging }: TicketCardProps) 
           )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

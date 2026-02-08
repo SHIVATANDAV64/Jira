@@ -20,7 +20,7 @@ export function BacklogPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[--color-primary-500]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary-500)]" />
       </div>
     );
   }
@@ -29,10 +29,10 @@ export function BacklogPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-center">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-[--color-text-primary] mb-2">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
           Failed to load project
         </h2>
-        <p className="text-[--color-text-secondary]">{projectError}</p>
+        <p className="text-[var(--color-text-secondary)]">{projectError}</p>
         <Link to="/projects">
           <Button variant="secondary" className="mt-4">
             Back to Projects
@@ -45,10 +45,10 @@ export function BacklogPage() {
   if (!project) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-xl font-semibold text-[--color-text-primary]">
+        <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
           Project not found
         </h2>
-        <p className="mt-2 text-[--color-text-secondary]">
+        <p className="mt-2 text-[var(--color-text-secondary)]">
           The project you're looking for doesn't exist or you don't have access.
         </p>
         <Link to="/projects">
@@ -70,14 +70,14 @@ export function BacklogPage() {
           </Button>
         </Link>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[--color-primary-100] text-[--color-primary-600] font-bold text-sm">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-primary-100)] text-[var(--color-primary-600)] font-bold text-sm">
             {project.key}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[--color-text-primary]">
+            <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
               {project.name} - Backlog
             </h1>
-            <p className="text-sm text-[--color-text-secondary]">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               Manage sprints and backlog items
             </p>
           </div>

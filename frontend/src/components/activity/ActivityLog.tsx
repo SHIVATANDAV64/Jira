@@ -39,7 +39,7 @@ export function ActivityLog({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-[--color-text-muted]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--color-text-muted)]" />
       </div>
     );
   }
@@ -47,8 +47,8 @@ export function ActivityLog({
   if (activities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <Activity className="h-10 w-10 text-[--color-text-muted] mb-2" />
-        <p className="text-[--color-text-secondary]">{emptyMessage}</p>
+        <Activity className="h-10 w-10 text-[var(--color-text-muted)] mb-2" />
+        <p className="text-[var(--color-text-secondary)]">{emptyMessage}</p>
       </div>
     );
   }
@@ -100,7 +100,7 @@ function ActivityItem({ activity, showProject }: ActivityItemProps) {
   });
 
   return (
-    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-[--color-bg-hover] transition-colors">
+    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors">
       {/* User Avatar */}
       <Avatar
         userId={activity.userId}
@@ -111,18 +111,18 @@ function ActivityItem({ activity, showProject }: ActivityItemProps) {
       {/* Activity Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-[--color-text-primary]">
+          <span className="font-medium text-[var(--color-text-primary)]">
             {activity.user?.name || 'Unknown User'}
           </span>
-          <span className="text-[--color-text-secondary]">{actionText}</span>
+          <span className="text-[var(--color-text-secondary)]">{actionText}</span>
         </div>
-        <div className="flex items-center gap-2 mt-1 text-xs text-[--color-text-muted]">
+        <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-muted)]">
           <Icon className="h-3 w-3" />
           <span>{timeAgo}</span>
           {showProject && typeof activity.details === 'object' && activity.details !== null && typeof (activity.details as Record<string, unknown>).projectName === 'string' && (
             <>
               <span>in</span>
-              <span className="font-medium text-[--color-text-secondary]">
+              <span className="font-medium text-[var(--color-text-secondary)]">
                 {(activity.details as Record<string, unknown>).projectName as string}
               </span>
             </>
