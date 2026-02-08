@@ -13,8 +13,12 @@ const LOGIN_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
 // BroadcastChannel for cross-tab session sync
 const SESSION_CHANNEL_NAME = 'bugtracker_session';
 
+export interface UserPreferences extends Models.Preferences {
+  avatar?: string;
+}
+
 interface AuthContextType {
-  user: Models.User<Models.Preferences> | null;
+  user: Models.User<UserPreferences> | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -29,7 +33,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
+  const [user, setUser] = useState<Models.User<UserPreferences> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionWarning, setSessionWarning] = useState(false);
   const loginAttemptsRef = useRef(0);
@@ -150,7 +154,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = useCallback(async () => {
     try {
-      const currentUser = await account.get();
+      // Cast the response to match our extended UserPreferences type
+      const currentUser = await account.get<UserPreferences>();
       setUser(currentUser);
     } catch {
       setUser(null);
