@@ -112,13 +112,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -139,8 +139,7 @@ function sanitizeForJson(obj) {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;')
-      .replace(/\//g, '&#x2F;');
+      .replace(/'/g, '&#x27;');
   };
 
   if (typeof obj === 'string') return sanitizeString(obj);
@@ -205,6 +204,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const { action, projectId, memberId, data } = body;
 
   if (!projectId) {
@@ -228,12 +230,23 @@ export default async function main({ req, res, log, error: logError }) {
 
     switch (action) {
       case 'list': {
-        // Get all members
-        const members = await databases.listDocuments(
-          DATABASE_ID,
-          COLLECTIONS.PROJECT_MEMBERS,
-          [Query.equal('projectId', projectId)]
-        );
+        // TEAM-06: Add Query.limit(500) and pagination loop for large teams
+        const allMembers = [];
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const batch = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.PROJECT_MEMBERS,
+            [Query.equal('projectId', projectId), Query.limit(500), Query.offset(offset)]
+          );
+          allMembers.push(...batch.documents);
+          hasMore = batch.documents.length === 500;
+          offset += 500;
+        }
+
+        const members = { documents: allMembers, total: allMembers.length };
 
         // Get user info for each member
         const membersWithUsers = await Promise.all(
@@ -277,6 +290,11 @@ export default async function main({ req, res, log, error: logError }) {
           memberId
         );
 
+        // Prevent self-role-change
+        if (member.userId === userId) {
+          return res.json(error('You cannot change your own role', 400));
+        }
+
         // Can't change owner's role
         const ownerCheck = await isProjectOwner(databases, projectId, member.userId);
         if (ownerCheck) {
@@ -287,6 +305,12 @@ export default async function main({ req, res, log, error: logError }) {
         const roleHierarchy = [PROJECT_ROLES.VIEWER, PROJECT_ROLES.DEVELOPER, PROJECT_ROLES.MANAGER, PROJECT_ROLES.ADMIN];
         const currentRoleIndex = roleHierarchy.indexOf(role);
         const newRoleIndex = roleHierarchy.indexOf(data.role);
+
+        // Prevent demoting/changing role of members with same or higher rank
+        const targetCurrentRoleIndex = roleHierarchy.indexOf(member.role);
+        if (targetCurrentRoleIndex >= currentRoleIndex) {
+          return res.json(error('You cannot change the role of a member with equal or higher rank', 403));
+        }
 
         if (newRoleIndex > currentRoleIndex && role !== PROJECT_ROLES.ADMIN) {
           return res.json(error('You cannot promote someone to a higher role than yours', 403));
@@ -340,6 +364,14 @@ export default async function main({ req, res, log, error: logError }) {
         const ownerCheck = await isProjectOwner(databases, projectId, member.userId);
         if (ownerCheck) {
           return res.json(error('Cannot remove project owner', 403));
+        }
+
+        // TEAM-04: Add rank hierarchy check - only allow removal if caller's rank is higher than target's rank
+        const roleHierarchy = [PROJECT_ROLES.VIEWER, PROJECT_ROLES.DEVELOPER, PROJECT_ROLES.MANAGER, PROJECT_ROLES.ADMIN];
+        const callerRankForRemove = roleHierarchy.indexOf(role);
+        const targetRankForRemove = roleHierarchy.indexOf(member.role);
+        if (callerRankForRemove <= targetRankForRemove) {
+          return res.json(error('You cannot remove a member with equal or higher rank', 403));
         }
 
         // Get project

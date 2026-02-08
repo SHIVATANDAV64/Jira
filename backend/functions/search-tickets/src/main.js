@@ -42,13 +42,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -88,6 +88,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const { projectId, query, filters = {}, limit = 50 } = body;
 
   if (!projectId) {
@@ -132,8 +135,8 @@ export default async function main({ req, res, log, error: logError }) {
 
     // Apply filters with validation
     const VALID_STATUSES = ['backlog', 'todo', 'in_progress', 'in_review', 'done'];
-    const VALID_PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest'];
-    const VALID_TYPES = ['bug', 'feature', 'task', 'improvement', 'epic'];
+    const VALID_PRIORITIES = ['critical', 'high', 'medium', 'low'];
+    const VALID_TYPES = ['bug', 'feature', 'task', 'improvement'];
 
     if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
       const validStatuses = filters.status.filter(s => VALID_STATUSES.includes(s));
@@ -187,16 +190,19 @@ export default async function main({ req, res, log, error: logError }) {
       if (ticket.assigneeId) userIds.add(ticket.assigneeId);
     });
 
-    // Fetch user details
+    // Fetch user details in parallel
     const userMap = new Map();
-    for (const uid of userIds) {
-      try {
-        const user = await users.get(uid);
-        userMap.set(uid, { $id: user.$id, name: user.name, email: user.email });
-      } catch (e) {
+    const uniqueUserIds = [...userIds];
+    const userResults = await Promise.all(
+      uniqueUserIds.map(uid => users.get(uid).catch(() => null))
+    );
+    uniqueUserIds.forEach((uid, i) => {
+      if (userResults[i]) {
+        userMap.set(uid, { $id: userResults[i].$id, name: userResults[i].name, email: userResults[i].email });
+      } else {
         userMap.set(uid, { $id: uid, name: 'Unknown', email: '' });
       }
-    }
+    });
 
     // Format results
     const results = tickets.documents.map((ticket) => ({

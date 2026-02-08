@@ -4,6 +4,7 @@ import { Input } from '@/components/common/Input';
 import { Textarea } from '@/components/common/Textarea';
 import { Select } from '@/components/common/Select';
 import { Button } from '@/components/common/Button';
+import { FileUpload } from '@/components/common/FileUpload';
 import type { Ticket, UpdateTicketForm, TicketType, TicketPriority, TicketStatus, ProjectMember } from '@/types';
 import {
   TICKET_TYPES,
@@ -12,6 +13,9 @@ import {
   DEFAULT_LABELS,
   VALIDATION,
 } from '@/lib/constants';
+
+const VALID_TYPES = ['bug', 'feature', 'task', 'improvement'] as const;
+const VALID_PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 
 interface EditTicketModalProps {
   isOpen: boolean;
@@ -40,6 +44,7 @@ export function EditTicketModal({
     labels: ticket.labels,
     dueDate: ticket.dueDate,
   });
+  const [attachmentIds, setAttachmentIds] = useState<string[]>(ticket.attachments || []);
 
   const [errors, setErrors] = useState<Partial<Record<keyof UpdateTicketForm, string>>>({});
 
@@ -55,6 +60,7 @@ export function EditTicketModal({
       labels: ticket.labels,
       dueDate: ticket.dueDate,
     });
+    setAttachmentIds(ticket.attachments || []);
   }, [ticket]);
 
   const typeOptions = Object.entries(TICKET_TYPES).map(([value, { label }]) => ({
@@ -117,6 +123,9 @@ export function EditTicketModal({
     if (formData.assigneeId !== ticket.assigneeId) changes.assigneeId = formData.assigneeId || undefined;
     if (JSON.stringify(formData.labels) !== JSON.stringify(ticket.labels)) changes.labels = formData.labels;
     if (formData.dueDate !== ticket.dueDate) changes.dueDate = formData.dueDate || undefined;
+    if (JSON.stringify(attachmentIds) !== JSON.stringify(ticket.attachments || [])) {
+      (changes as Record<string, unknown>).attachments = attachmentIds;
+    }
 
     // Only submit if there are changes
     if (Object.keys(changes).length === 0) {
@@ -140,6 +149,7 @@ export function EditTicketModal({
       labels: ticket.labels,
       dueDate: ticket.dueDate,
     });
+    setAttachmentIds(ticket.attachments || []);
     setErrors({});
     onClose();
   };
@@ -178,16 +188,24 @@ export function EditTicketModal({
           <Select
             label="Type"
             value={formData.type || 'task'}
-            onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value as TicketType }))}
+            onChange={(e) => {
+              const val = e.target.value;
+              if ((VALID_TYPES as readonly string[]).includes(val)) {
+                setFormData((prev) => ({ ...prev, type: val as TicketType }));
+              }
+            }}
             options={typeOptions}
           />
 
           <Select
             label="Priority"
             value={formData.priority || 'medium'}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, priority: e.target.value as TicketPriority }))
-            }
+            onChange={(e) => {
+              const val = e.target.value;
+              if ((VALID_PRIORITIES as readonly string[]).includes(val)) {
+                setFormData((prev) => ({ ...prev, priority: val as TicketPriority }));
+              }
+            }}
             options={priorityOptions}
           />
         </div>
@@ -235,6 +253,16 @@ export function EditTicketModal({
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Attachments */}
+        <div>
+          <label className="block text-sm font-medium text-[--color-text-secondary] mb-2">Attachments</label>
+          <FileUpload
+            attachments={attachmentIds}
+            onChange={setAttachmentIds}
+            maxFiles={5}
+          />
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-[--color-border-primary]">

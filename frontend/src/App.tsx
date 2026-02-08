@@ -19,6 +19,18 @@ const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then(m =
 const BacklogPage = lazy(() => import('@/pages/backlog/BacklogPage').then(m => ({ default: m.BacklogPage })));
 const NotificationsPage = lazy(() => import('@/pages/notifications/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 
+// 404 Page Component (NAV-04)
+function NotFoundPage() {
+  return (
+    <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
+      <h1 className="text-6xl font-bold text-[--color-text-muted]">404</h1>
+      <p className="text-lg text-[--color-text-secondary]">Page not found</p>
+      <p className="text-sm text-[--color-text-muted]">The page you're looking for doesn't exist or has been moved.</p>
+      <a href="/dashboard" className="mt-4 rounded-lg bg-[--color-primary-600] px-4 py-2 text-sm font-medium text-white hover:bg-[--color-primary-500]">Go to Dashboard</a>
+    </div>
+  );
+}
+
 // Loading spinner component
 function PageLoader() {
   return (
@@ -120,6 +132,17 @@ export default function App() {
               </ErrorBoundary>
             }
           />
+          {/* PROJ-11: Project settings route */}
+          <Route
+            path="projects/:projectId/settings"
+            element={
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <SettingsPage />
+                </Suspense>
+              </ErrorBoundary>
+            }
+          />
           <Route
             path="projects/:projectId/tickets/:ticketId"
             element={
@@ -180,10 +203,16 @@ export default function App() {
               </ErrorBoundary>
             }
           />
+
+          {/* NAV-04: 404 page for authenticated users */}
+          <Route
+            path="*"
+            element={<NotFoundPage />}
+          />
         </Route>
 
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Catch all for unauthenticated users — redirect to login (AUTH-25) */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </ErrorBoundary>
   );

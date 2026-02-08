@@ -1,4 +1,4 @@
-import { Client, Databases, Teams, ID, Query } from 'node-appwrite';
+import { Client, Databases, Teams, Storage, ID, Query } from 'node-appwrite';
 
 // ============================================================================
 // STANDALONE FUNCTION - All utilities inline (Appwrite functions are deployed
@@ -7,12 +7,18 @@ import { Client, Databases, Teams, ID, Query } from 'node-appwrite';
 
 // --- Constants (from environment variables) ---
 const DATABASE_ID = process.env.APPWRITE_DATABASE_ID;
+const BUCKETS = {
+  ATTACHMENTS: process.env.APPWRITE_BUCKET_ATTACHMENTS,
+};
+
 const COLLECTIONS = {
   PROJECTS: process.env.APPWRITE_COLLECTION_PROJECTS,
   PROJECT_MEMBERS: process.env.APPWRITE_COLLECTION_PROJECT_MEMBERS,
   TICKETS: process.env.APPWRITE_COLLECTION_TICKETS,
   COMMENTS: process.env.APPWRITE_COLLECTION_COMMENTS,
   ACTIVITY_LOG: process.env.APPWRITE_COLLECTION_ACTIVITY_LOGS,
+  SPRINTS: process.env.APPWRITE_COLLECTION_SPRINTS,
+  NOTIFICATIONS: process.env.APPWRITE_COLLECTION_NOTIFICATIONS,
 };
 
 const PROJECT_ROLES = {
@@ -95,6 +101,7 @@ function createAdminClient() {
     client,
     databases: new Databases(client),
     teams: new Teams(client),
+    storage: new Storage(client),
   };
 }
 
@@ -111,13 +118,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -133,8 +140,7 @@ function sanitizeString(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
 }
 
 function sanitizeForJson(obj) {
@@ -182,6 +188,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const { action, projectId, data } = body;
 
   if (!projectId) {
@@ -193,7 +202,7 @@ export default async function main({ req, res, log, error: logError }) {
     return res.json(error('Invalid project ID format'));
   }
 
-  const { databases, teams } = createAdminClient();
+const { databases, teams, storage } = createAdminClient();
 
   try {
     // Check user's role in the project
@@ -216,6 +225,11 @@ export default async function main({ req, res, log, error: logError }) {
       case 'update': {
         if (!hasPermission(role, 'canEditProject')) {
           return res.json(error('You do not have permission to edit this project', 403));
+        }
+
+        // Check if attempting to update key field
+        if (data.key !== undefined) {
+          return res.json(error('Project key cannot be changed after creation', 400));
         }
 
         // Validate update data
@@ -282,24 +296,108 @@ export default async function main({ req, res, log, error: logError }) {
           log(`Could not delete team: ${e.message}`);
         }
 
-        // Delete all tickets in the project
-        const tickets = await databases.listDocuments(
-          DATABASE_ID,
-          COLLECTIONS.TICKETS,
-          [Query.equal('projectId', projectId)]
-        );
-        for (const ticket of tickets.documents) {
-          await databases.deleteDocument(DATABASE_ID, COLLECTIONS.TICKETS, ticket.$id);
+        // Collect all ticket IDs and attachment file IDs for cascade deletion
+        const allTicketIds = [];
+        const allAttachmentFileIds = [];
+        let ticketOffset = 0;
+        while (true) {
+          const ticketBatch = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.TICKETS,
+            [Query.equal('projectId', projectId), Query.limit(500), Query.offset(ticketOffset)]
+          );
+          if (ticketBatch.documents.length === 0) break;
+          for (const ticket of ticketBatch.documents) {
+            allTicketIds.push(ticket.$id);
+            if (Array.isArray(ticket.attachments)) {
+              for (const fileId of ticket.attachments) {
+                allAttachmentFileIds.push(fileId);
+              }
+            }
+          }
+          ticketOffset += ticketBatch.documents.length;
+          if (ticketBatch.documents.length < 500) break;
+        }
+
+        // Delete all storage attachments
+        for (const fileId of allAttachmentFileIds) {
+          try {
+            await storage.deleteFile(BUCKETS.ATTACHMENTS, fileId);
+          } catch (e) {
+            log(`Could not delete attachment ${fileId}: ${e.message}`);
+          }
+        }
+
+        // Delete all comments for each ticket
+        for (const tId of allTicketIds) {
+          while (true) {
+            const comments = await databases.listDocuments(
+              DATABASE_ID,
+              COLLECTIONS.COMMENTS,
+              [Query.equal('ticketId', tId), Query.limit(500)]
+            );
+            if (comments.documents.length === 0) break;
+            for (const comment of comments.documents) {
+              await databases.deleteDocument(DATABASE_ID, COLLECTIONS.COMMENTS, comment.$id);
+            }
+          }
+        }
+
+        // Delete all tickets
+        for (const tId of allTicketIds) {
+          await databases.deleteDocument(DATABASE_ID, COLLECTIONS.TICKETS, tId);
+        }
+
+        // Delete all sprints in the project
+        while (true) {
+          const sprints = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.SPRINTS,
+            [Query.equal('projectId', projectId), Query.limit(500)]
+          );
+          if (sprints.documents.length === 0) break;
+          for (const sprint of sprints.documents) {
+            await databases.deleteDocument(DATABASE_ID, COLLECTIONS.SPRINTS, sprint.$id);
+          }
+        }
+
+        // Delete all activity logs in the project
+        while (true) {
+          const activityLogs = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.ACTIVITY_LOG,
+            [Query.equal('projectId', projectId), Query.limit(500)]
+          );
+          if (activityLogs.documents.length === 0) break;
+          for (const logDoc of activityLogs.documents) {
+            await databases.deleteDocument(DATABASE_ID, COLLECTIONS.ACTIVITY_LOG, logDoc.$id);
+          }
+        }
+
+        // Delete all notifications in the project
+        while (true) {
+          const notifications = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.NOTIFICATIONS,
+            [Query.equal('projectId', projectId), Query.limit(500)]
+          );
+          if (notifications.documents.length === 0) break;
+          for (const notification of notifications.documents) {
+            await databases.deleteDocument(DATABASE_ID, COLLECTIONS.NOTIFICATIONS, notification.$id);
+          }
         }
 
         // Delete all project members
-        const members = await databases.listDocuments(
-          DATABASE_ID,
-          COLLECTIONS.PROJECT_MEMBERS,
-          [Query.equal('projectId', projectId)]
-        );
-        for (const member of members.documents) {
-          await databases.deleteDocument(DATABASE_ID, COLLECTIONS.PROJECT_MEMBERS, member.$id);
+        while (true) {
+          const members = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.PROJECT_MEMBERS,
+            [Query.equal('projectId', projectId), Query.limit(500)]
+          );
+          if (members.documents.length === 0) break;
+          for (const member of members.documents) {
+            await databases.deleteDocument(DATABASE_ID, COLLECTIONS.PROJECT_MEMBERS, member.$id);
+          }
         }
 
         // Delete the project
@@ -323,6 +421,27 @@ export default async function main({ req, res, log, error: logError }) {
 
         log(`Project archived: ${projectId} by user ${userId}`);
         return res.json(success(archived));
+      }
+
+      case 'restore': {
+        // Verify the project exists and is archived
+        const projectToRestore = await databases.getDocument(DATABASE_ID, COLLECTIONS.PROJECTS, projectId);
+        
+        // Check permission - same as archive (canEditProject)
+        if (!hasPermission(role, 'canEditProject')) {
+          return res.json(error('You do not have permission to restore this project', 403));
+        }
+
+        if (projectToRestore.status !== 'archived') {
+          return res.json(error('Project is not archived', 400));
+        }
+
+        const restoredProject = await databases.updateDocument(
+          DATABASE_ID, COLLECTIONS.PROJECTS, projectId,
+          { status: 'active' }
+        );
+
+        return res.json(success(restoredProject));
       }
 
       default:

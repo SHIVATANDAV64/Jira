@@ -13,6 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Avatar } from '@/components/common/Avatar';
+import { Button } from '@/components/common/Button';
 import type { ActivityLog as ActivityLogType, ActivityAction } from '@/types';
 import { formatActivityAction } from '@/hooks/useActivity';
 
@@ -21,6 +22,9 @@ interface ActivityLogProps {
   isLoading?: boolean;
   emptyMessage?: string;
   showProject?: boolean;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
 export function ActivityLog({
@@ -28,6 +32,9 @@ export function ActivityLog({
   isLoading,
   emptyMessage = 'No activity yet',
   showProject = false,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
 }: ActivityLogProps) {
   if (isLoading) {
     return (
@@ -55,6 +62,27 @@ export function ActivityLog({
           showProject={showProject}
         />
       ))}
+      
+      {/* ACT-03: Load More button for pagination */}
+      {hasMore && onLoadMore && (
+        <div className="flex justify-center pt-4">
+          <Button
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+            variant="ghost"
+            size="sm"
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load More'
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -91,11 +119,11 @@ function ActivityItem({ activity, showProject }: ActivityItemProps) {
         <div className="flex items-center gap-2 mt-1 text-xs text-[--color-text-muted]">
           <Icon className="h-3 w-3" />
           <span>{timeAgo}</span>
-          {showProject && typeof activity.details?.projectName === 'string' && (
+          {showProject && typeof activity.details === 'object' && activity.details !== null && typeof (activity.details as Record<string, unknown>).projectName === 'string' && (
             <>
               <span>in</span>
               <span className="font-medium text-[--color-text-secondary]">
-                {activity.details.projectName}
+                {(activity.details as Record<string, unknown>).projectName as string}
               </span>
             </>
           )}

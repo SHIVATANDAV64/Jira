@@ -1,7 +1,11 @@
 {
   "name": "get-tickets",
   "version": "1.0.0",
+  "main": "src/main.js",
   "type": "module",
+  "scripts": {
+    "build": ""
+  },
   "dependencies": {
     "node-appwrite": "^14.0.0"
   }

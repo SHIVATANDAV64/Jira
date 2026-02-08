@@ -59,6 +59,8 @@ export async function inviteMember(
 
 /**
  * Update a member's role
+ * TEAM-08: No optimistic locking for concurrent role changes. Last-write-wins behavior.
+ * TODO: Implement version tracking (via $updatedAt) to detect and prevent concurrent modifications.
  */
 export async function updateMemberRole(
   projectId: string,

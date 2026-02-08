@@ -42,13 +42,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -88,6 +88,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const { projectId, filters = {}, limit = 100, offset = 0 } = body;
 
   if (!projectId) {
@@ -113,50 +116,63 @@ export default async function main({ req, res, log, error: logError }) {
       return res.json(error('You are not a member of this project', 403));
     }
 
-    // Build query
-    const queries = [
-      Query.equal('projectId', projectId),
-      Query.limit(safeLimit),
-      Query.offset(safeOffset),
-      Query.orderAsc('order'),
-    ];
 
-    // Apply filters with validation
-    const VALID_STATUSES = ['backlog', 'todo', 'in_progress', 'in_review', 'done'];
-    const VALID_PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest'];
-    const VALID_TYPES = ['bug', 'feature', 'task', 'improvement', 'epic'];
 
-    if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
-      const validStatuses = filters.status.filter(s => VALID_STATUSES.includes(s));
-      if (validStatuses.length > 0) {
-        queries.push(Query.equal('status', validStatuses));
+    // TKT-01: Get ALL tickets with pagination loop (not just first 100)
+    const allTickets = [];
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const paginatedQueries = [
+        Query.equal('projectId', projectId),
+        Query.limit(500),
+        Query.offset(offset),
+        Query.orderAsc('order'),
+      ];
+
+      // Apply the same filters
+      const VALID_STATUSES = ['backlog', 'todo', 'in_progress', 'in_review', 'done'];
+      const VALID_PRIORITIES = ['critical', 'high', 'medium', 'low'];
+      const VALID_TYPES = ['bug', 'feature', 'task', 'improvement'];
+
+      if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
+        const validStatuses = filters.status.filter(s => VALID_STATUSES.includes(s));
+        if (validStatuses.length > 0) {
+          paginatedQueries.push(Query.equal('status', validStatuses));
+        }
       }
-    }
-    if (filters.priority && Array.isArray(filters.priority) && filters.priority.length > 0) {
-      const validPriorities = filters.priority.filter(p => VALID_PRIORITIES.includes(p));
-      if (validPriorities.length > 0) {
-        queries.push(Query.equal('priority', validPriorities));
+      if (filters.priority && Array.isArray(filters.priority) && filters.priority.length > 0) {
+        const validPriorities = filters.priority.filter(p => VALID_PRIORITIES.includes(p));
+        if (validPriorities.length > 0) {
+          paginatedQueries.push(Query.equal('priority', validPriorities));
+        }
       }
-    }
-    if (filters.type && Array.isArray(filters.type) && filters.type.length > 0) {
-      const validTypes = filters.type.filter(t => VALID_TYPES.includes(t));
-      if (validTypes.length > 0) {
-        queries.push(Query.equal('type', validTypes));
+      if (filters.type && Array.isArray(filters.type) && filters.type.length > 0) {
+        const validTypes = filters.type.filter(t => VALID_TYPES.includes(t));
+        if (validTypes.length > 0) {
+          paginatedQueries.push(Query.equal('type', validTypes));
+        }
       }
-    }
-    if (filters.assigneeId && typeof filters.assigneeId === 'string' && /^[a-zA-Z0-9_-]+$/.test(filters.assigneeId)) {
-      queries.push(Query.equal('assigneeId', filters.assigneeId));
-    }
-    if (filters.reporterId && typeof filters.reporterId === 'string' && /^[a-zA-Z0-9_-]+$/.test(filters.reporterId)) {
-      queries.push(Query.equal('reporterId', filters.reporterId));
+      if (filters.assigneeId && typeof filters.assigneeId === 'string' && /^[a-zA-Z0-9_-]+$/.test(filters.assigneeId)) {
+        paginatedQueries.push(Query.equal('assigneeId', filters.assigneeId));
+      }
+      if (filters.reporterId && typeof filters.reporterId === 'string' && /^[a-zA-Z0-9_-]+$/.test(filters.reporterId)) {
+        paginatedQueries.push(Query.equal('reporterId', filters.reporterId));
+      }
+
+      const batch = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.TICKETS,
+        paginatedQueries
+      );
+
+      allTickets.push(...batch.documents);
+      hasMore = batch.documents.length === 500;
+      offset += 500;
     }
 
-    // Get tickets
-    const tickets = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TICKETS,
-      queries
-    );
+    const tickets = { documents: allTickets, total: allTickets.length };
 
     // Get unique user IDs from tickets
     const userIds = new Set();
@@ -165,21 +181,23 @@ export default async function main({ req, res, log, error: logError }) {
       if (ticket.assigneeId) userIds.add(ticket.assigneeId);
     });
 
-    // Fetch user details
+    // Fetch user details in parallel
     const userMap = new Map();
-    for (const uid of userIds) {
-      try {
-        const user = await users.get(uid);
+    const uniqueUserIds = [...userIds];
+    const userResults = await Promise.all(
+      uniqueUserIds.map(uid => users.get(uid).catch(() => null))
+    );
+    uniqueUserIds.forEach((uid, i) => {
+      if (userResults[i]) {
         userMap.set(uid, {
-          $id: user.$id,
-          name: user.name,
-          email: user.email,
+          $id: userResults[i].$id,
+          name: userResults[i].name,
+          email: userResults[i].email,
         });
-      } catch (e) {
-        // User might not exist anymore
+      } else {
         userMap.set(uid, { $id: uid, name: 'Unknown', email: '' });
       }
-    }
+    });
 
     // Attach user data to tickets
     const ticketsWithUsers = tickets.documents.map((ticket) => ({

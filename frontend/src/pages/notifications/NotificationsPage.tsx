@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Check, CheckCheck, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/common/Button';
@@ -12,19 +13,35 @@ import {
 } from '@/hooks/useNotifications';
 import type { Notification } from '@/types';
 
+// Simple URL validation function
+function isSafeUrl(url?: string): boolean {
+  if (!url) return false;
+  // Must start with '/' but not '//'
+  return url.startsWith('/') && !url.startsWith('//');
+}
+
+const NOTIFICATIONS_PER_PAGE = 10;
+
 export function NotificationsPage() {
   const { user } = useAuth();
   const { notifications, isLoading } = useNotifications(user?.$id);
   const markAsReadMutation = useMarkAsRead();
   const markAllAsReadMutation = useMarkAllAsRead();
   const deleteMutation = useDeleteNotification();
+  const [page, setPage] = useState(1);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const displayedNotifications = notifications.slice(0, page * NOTIFICATIONS_PER_PAGE);
+  const hasMore = notifications.length > displayedNotifications.length;
 
   const handleMarkAllAsRead = () => {
     if (user?.$id) {
       markAllAsReadMutation.mutate(user.$id);
     }
+  };
+
+  const handleLoadMore = () => {
+    setPage(prev => prev + 1);
   };
 
   if (isLoading) {
@@ -75,8 +92,8 @@ export function NotificationsPage() {
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-[--color-border-primary]">
-            {notifications.map((notification) => (
+          <div>
+            {displayedNotifications.map((notification) => (
               <NotificationRow
                 key={notification.$id}
                 notification={notification}
@@ -93,6 +110,19 @@ export function NotificationsPage() {
           </div>
         )}
       </div>
+
+      {/* Load More Button */}
+      {hasMore && (
+        <div className="flex justify-center">
+          <Button
+            variant="secondary"
+            onClick={handleLoadMore}
+            isLoading={false}
+          >
+            Load More
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -164,7 +194,7 @@ function NotificationRow({ notification, onMarkRead, onDelete }: NotificationRow
     </div>
   );
 
-  if (notification.actionUrl) {
+  if (notification.actionUrl && isSafeUrl(notification.actionUrl)) {
     return (
       <Link to={notification.actionUrl} onClick={!notification.read ? onMarkRead : undefined}>
         {content}

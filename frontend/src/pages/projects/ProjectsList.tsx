@@ -3,32 +3,37 @@ import { Link } from 'react-router-dom';
 import { Plus, FolderKanban, Search, MoreVertical, Archive, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
-import { useProjects, useArchiveProject, useDeleteProject } from '@/hooks';
+import { Modal } from '@/components/common/Modal';
+import { useProjects, useArchiveProject, useRestoreProject, useDeleteProject, usePermissions } from '@/hooks';
 
 export function ProjectsList() {
   const { projects, isLoading, error } = useProjects();
   const archiveMutation = useArchiveProject();
+  const restoreMutation = useRestoreProject();
   const deleteMutation = useDeleteProject();
+  const { permissions } = usePermissions([]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     project.key.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleArchive = async (projectId: string) => {
-    if (confirm('Are you sure you want to archive this project?')) {
+  const handleArchive = async (projectId: string, isArchived: boolean) => {
+    if (isArchived) {
+      restoreMutation.mutate(projectId);
+    } else {
       archiveMutation.mutate(projectId);
     }
     setOpenMenuId(null);
   };
 
   const handleDelete = async (projectId: string) => {
-    if (confirm('Are you sure you want to permanently delete this project? This action cannot be undone.')) {
-      deleteMutation.mutate(projectId);
-    }
+    deleteMutation.mutate(projectId);
+    setDeleteConfirmId(null);
     setOpenMenuId(null);
   };
 
@@ -153,22 +158,26 @@ export function ProjectsList() {
                 {/* Dropdown menu */}
                 {openMenuId === project.$id && (
                   <div className="absolute right-0 top-8 z-10 w-48 rounded-lg border border-[--color-border-primary] bg-[--color-bg-secondary] py-1 shadow-lg">
-                    <button
-                      className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[--color-text-secondary] hover:bg-[--color-bg-hover] disabled:opacity-50"
-                      onClick={() => handleArchive(project.$id)}
-                      disabled={archiveMutation.isPending}
-                    >
-                      <Archive className="h-4 w-4" />
-                      {project.status === 'archived' ? 'Restore' : 'Archive'}
-                    </button>
-                    <button
-                      className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-[--color-bg-hover] disabled:opacity-50"
-                      onClick={() => handleDelete(project.$id)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </button>
+                    {permissions.canEditProject && (
+                      <button
+                        className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-sm text-[--color-text-secondary] hover:bg-[--color-bg-hover] disabled:opacity-50"
+                        onClick={() => handleArchive(project.$id, project.status === 'archived')}
+                        disabled={archiveMutation.isPending || restoreMutation.isPending}
+                      >
+                        <Archive className="h-4 w-4" />
+                        {project.status === 'archived' ? 'Restore' : 'Archive'}
+                      </button>
+                    )}
+                    {permissions.canDeleteProject && (
+                      <button
+                        className="flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-[--color-bg-hover] disabled:opacity-50"
+                        onClick={() => setDeleteConfirmId(project.$id)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -184,6 +193,35 @@ export function ProjectsList() {
           onClick={() => setOpenMenuId(null)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        title="Delete Project"
+      >
+        <div className="space-y-4">
+          <p className="text-[--color-text-secondary]">
+            Are you sure you want to permanently delete this project? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteConfirmId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-red-400 hover:text-red-300"
+              onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
+              isLoading={deleteMutation.isPending}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

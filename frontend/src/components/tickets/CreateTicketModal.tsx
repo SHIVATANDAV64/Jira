@@ -4,8 +4,12 @@ import { Input } from '@/components/common/Input';
 import { Textarea } from '@/components/common/Textarea';
 import { Select } from '@/components/common/Select';
 import { Button } from '@/components/common/Button';
-import type { CreateTicketForm, TicketType, TicketPriority, ProjectMember } from '@/types';
-import { TICKET_TYPES, TICKET_PRIORITIES, DEFAULT_LABELS, VALIDATION } from '@/lib/constants';
+import { FileUpload } from '@/components/common/FileUpload';
+import type { CreateTicketForm, TicketType, TicketPriority, TicketStatus, ProjectMember } from '@/types';
+import { TICKET_TYPES, TICKET_PRIORITIES, TICKET_STATUSES, DEFAULT_LABELS, VALIDATION } from '@/lib/constants';
+
+const VALID_TYPES = ['bug', 'feature', 'task', 'improvement'] as const;
+const VALID_PRIORITIES = ['critical', 'high', 'medium', 'low'] as const;
 
 interface CreateTicketModalProps {
   isOpen: boolean;
@@ -14,6 +18,7 @@ interface CreateTicketModalProps {
   members: ProjectMember[];
   projectKey: string;
   isSubmitting?: boolean;
+  initialStatus?: TicketStatus;
 }
 
 export function CreateTicketModal({
@@ -23,16 +28,19 @@ export function CreateTicketModal({
   members,
   projectKey,
   isSubmitting = false,
+  initialStatus = 'todo',
 }: CreateTicketModalProps) {
   const [formData, setFormData] = useState<CreateTicketForm>({
     title: '',
     description: '',
     type: 'task',
     priority: 'medium',
+    status: initialStatus,
     assigneeId: undefined,
     labels: [],
     dueDate: undefined,
   });
+  const [attachmentIds, setAttachmentIds] = useState<string[]>([]);
 
   const [errors, setErrors] = useState<Partial<Record<keyof CreateTicketForm, string>>>({});
 
@@ -42,6 +50,11 @@ export function CreateTicketModal({
   }));
 
   const priorityOptions = Object.entries(TICKET_PRIORITIES).map(([value, { label }]) => ({
+    value,
+    label,
+  }));
+
+  const statusOptions = Object.entries(TICKET_STATUSES).map(([value, { label }]) => ({
     value,
     label,
   }));
@@ -78,22 +91,30 @@ export function CreateTicketModal({
 
     if (!validateForm()) return;
 
-    await onSubmit({
-      ...formData,
-      assigneeId: formData.assigneeId || undefined,
-    });
+    try {
+      await onSubmit({
+        ...formData,
+        assigneeId: formData.assigneeId || undefined,
+        attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
+      });
 
-    // Reset form
-    setFormData({
-      title: '',
-      description: '',
-      type: 'task',
-      priority: 'medium',
-      assigneeId: undefined,
-      labels: [],
-      dueDate: undefined,
-    });
-    setErrors({});
+      // Only reset form after successful API call
+      setFormData({
+        title: '',
+        description: '',
+        type: 'task',
+        priority: 'medium',
+        status: initialStatus,
+        assigneeId: undefined,
+        labels: [],
+        dueDate: undefined,
+      });
+      setAttachmentIds([]);
+      setErrors({});
+    } catch (error) {
+      // Error handling is delegated to onSubmit's error handling
+      console.error('Failed to create ticket:', error);
+    }
   };
 
   const handleClose = () => {
@@ -102,10 +123,12 @@ export function CreateTicketModal({
       description: '',
       type: 'task',
       priority: 'medium',
+      status: initialStatus,
       assigneeId: undefined,
       labels: [],
       dueDate: undefined,
     });
+    setAttachmentIds([]);
     setErrors({});
     onClose();
   };
@@ -140,21 +163,41 @@ export function CreateTicketModal({
           rows={4}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Select
             label="Type"
             value={formData.type}
-            onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value as TicketType }))}
+            onChange={(e) => {
+              const val = e.target.value;
+              if ((VALID_TYPES as readonly string[]).includes(val)) {
+                setFormData((prev) => ({ ...prev, type: val as TicketType }));
+              }
+            }}
             options={typeOptions}
           />
 
           <Select
             label="Priority"
             value={formData.priority}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, priority: e.target.value as TicketPriority }))
-            }
+            onChange={(e) => {
+              const val = e.target.value;
+              if ((VALID_PRIORITIES as readonly string[]).includes(val)) {
+                setFormData((prev) => ({ ...prev, priority: val as TicketPriority }));
+              }
+            }}
             options={priorityOptions}
+          />
+
+          <Select
+            label="Status"
+            value={formData.status || 'todo'}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val in TICKET_STATUSES) {
+                setFormData((prev) => ({ ...prev, status: val as TicketStatus }));
+              }
+            }}
+            options={statusOptions}
           />
         </div>
 
@@ -192,11 +235,21 @@ export function CreateTicketModal({
           </div>
         </div>
 
+        {/* Attachments */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Attachments</label>
+          <FileUpload
+            attachments={attachmentIds}
+            onChange={setAttachmentIds}
+            maxFiles={5}
+          />
+        </div>
+
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
-          <Button type="button" variant="ghost" onClick={handleClose} className="cursor-pointer">
+          <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting} className="cursor-pointer">
             Cancel
           </Button>
-          <Button type="submit" isLoading={isSubmitting} className="cursor-pointer">
+          <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting} className="cursor-pointer">
             Create Ticket
           </Button>
         </div>

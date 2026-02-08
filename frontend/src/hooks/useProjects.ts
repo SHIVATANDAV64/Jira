@@ -29,29 +29,20 @@ export function useProjects() {
     },
   });
 
-  // Realtime subscription
+  // Realtime subscription — only invalidate if document is in cache or on delete events
   useEffect(() => {
     const unsubscribe = client.subscribe(
       `databases.${DATABASE_ID}.collections.${COLLECTIONS.PROJECTS}.documents`,
       (response) => {
         const { events, payload } = response as { events: string[]; payload: Project };
-        const eventType = events[0] || '';
         const document = payload;
 
-        queryClient.setQueryData<Project[]>(projectKeys.lists(), (old = []) => {
-          if (eventType.includes('create')) {
-            return [document, ...old];
-          } else if (eventType.includes('update')) {
-            return old.map((p) => (p.$id === document.$id ? document : p));
-          } else if (eventType.includes('delete')) {
-            return old.filter((p) => p.$id !== document.$id);
-          }
-          return old;
-        });
-
-        // Also update the detail cache if it exists
-        if (eventType.includes('update')) {
-          queryClient.setQueryData(projectKeys.detail(document.$id), document);
+        // Only invalidate on delete events or updates to invalidate stale data
+        if (events[0]?.includes('delete')) {
+          queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+        } else if (events[0]?.includes('update')) {
+          // For updates, only invalidate the specific project detail cache
+          queryClient.invalidateQueries({ queryKey: projectKeys.detail(document.$id) });
         }
       }
     );
@@ -87,22 +78,14 @@ export function useProject(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
-  // Realtime subscription for this specific project
+  // Realtime subscription — invalidate to refetch
   useEffect(() => {
     if (!projectId) return;
 
     const unsubscribe = client.subscribe(
       `databases.${DATABASE_ID}.collections.${COLLECTIONS.PROJECTS}.documents.${projectId}`,
-      (response) => {
-        const { events, payload } = response as { events: string[]; payload: Project };
-        const eventType = events[0] || '';
-        const document = payload;
-
-        if (eventType.includes('update')) {
-          queryClient.setQueryData(projectKeys.detail(projectId), document);
-        } else if (eventType.includes('delete')) {
-          queryClient.setQueryData(projectKeys.detail(projectId), null);
-        }
+      () => {
+        queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
       }
     );
 
@@ -178,6 +161,28 @@ export function useArchiveProject() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.all });
       toast.success('Project archived successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+// PROJ-02: Restore project hook
+export function useRestoreProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await projectService.restoreProject(projectId);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to restore project');
+      }
+      return projectId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success('Project restored successfully');
     },
     onError: (error: Error) => {
       toast.error(error.message);

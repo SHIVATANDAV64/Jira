@@ -9,17 +9,23 @@ import {
   User,
   Loader2,
   Send,
+  UserPlus,
+  Paperclip,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/common/Button';
 import { PriorityBadge, TypeBadge, StatusBadge } from '@/components/common/Badge';
 import { Avatar } from '@/components/common/Avatar';
 import { Textarea } from '@/components/common/Textarea';
+import { Modal } from '@/components/common/Modal';
 import { EditTicketModal } from '@/components/tickets/EditTicketModal';
+import { AttachmentList } from '@/components/common/FileUpload';
 import {
   useTicket,
   useDeleteTicket,
   useUpdateTicket,
+  useAssignTicket,
 } from '@/hooks/useTickets';
 import {
   useComments,
@@ -27,6 +33,7 @@ import {
   useDeleteComment,
 } from '@/hooks/useComments';
 import { useProjectMembers } from '@/hooks/useProjectMembers';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { UpdateTicketForm } from '@/types';
 
 export function TicketDetail() {
@@ -35,16 +42,31 @@ export function TicketDetail() {
     ticketId: string;
   }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [newComment, setNewComment] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // React Query hooks
   const { ticket, isLoading: isLoadingTicket } = useTicket(ticketId);
   const { comments, isLoading: isLoadingComments } = useComments(ticketId);
   const { members } = useProjectMembers(projectId);
+  const { permissions } = usePermissions(members);
   const deleteTicketMutation = useDeleteTicket();
   const updateTicketMutation = useUpdateTicket();
-  const createCommentMutation = useCreateComment(ticketId);
+  const assignTicketMutation = useAssignTicket();
+  // NTF-01c: Pass ticket context for comment notifications
+  const createCommentMutation = useCreateComment(
+    ticketId,
+    ticket
+      ? {
+          reporterId: ticket.reporterId,
+          projectId: ticket.projectId,
+          ticketKey: ticket.ticketKey || `${ticket.$id}-${ticket.ticketNumber}`,
+          ticketTitle: ticket.title,
+        }
+      : undefined
+  );
   const deleteCommentMutation = useDeleteComment(ticketId);
 
   const isLoading = isLoadingTicket || isLoadingComments;
@@ -63,15 +85,17 @@ export function TicketDetail() {
   };
 
   const handleDeleteTicket = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTicket = () => {
     if (!ticketId) return;
-    
-    if (window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
-      deleteTicketMutation.mutate(ticketId, {
-        onSuccess: () => {
-          navigate(`/projects/${projectId}`);
-        },
-      });
-    }
+    setShowDeleteConfirm(false);
+    deleteTicketMutation.mutate(ticketId, {
+      onSuccess: () => {
+        navigate(`/projects/${projectId}`);
+      },
+    });
   };
 
   const handleDeleteComment = (commentId: string) => {
@@ -83,8 +107,22 @@ export function TicketDetail() {
   const handleUpdateTicket = async (data: UpdateTicketForm) => {
     if (!ticketId) return;
     
-    await updateTicketMutation.mutateAsync({ ticketId, data });
-    setShowEditModal(false);
+    try {
+      await updateTicketMutation.mutateAsync({ ticketId, data });
+      setShowEditModal(false);
+    } catch (error) {
+      // Error handling is delegated to the mutation's onError callback
+      console.error('Failed to update ticket:', error);
+    }
+  };
+
+  // TKT-24: Handle self-assign
+  const handleSelfAssign = async () => {
+    if (!ticketId || !user) return;
+    assignTicketMutation.mutate({
+      ticketId,
+      assigneeId: user.$id,
+    });
   };
 
   if (isLoading) {
@@ -135,27 +173,31 @@ export function TicketDetail() {
               <div className="flex items-center gap-2">
                 <TypeBadge type={ticket.type} />
                 <span className="text-sm text-[--color-text-muted]">
-                  TICKET-{ticket.ticketNumber}
+                  {ticket.ticketKey ? ticket.ticketKey : `TICKET-${ticket.ticketNumber}`}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="cursor-pointer"
-                  onClick={() => setShowEditModal(true)}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-400 cursor-pointer"
-                  onClick={handleDeleteTicket}
-                  isLoading={deleteTicketMutation.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {permissions.canEditTickets && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="cursor-pointer"
+                    onClick={() => setShowEditModal(true)}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                )}
+                {permissions.canDeleteTickets && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-400 cursor-pointer"
+                    onClick={handleDeleteTicket}
+                    isLoading={deleteTicketMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -223,7 +265,7 @@ export function TicketDetail() {
                 {comments.map((comment) => (
                   <div
                     key={comment.$id}
-                    className="flex gap-3 p-4 rounded-lg bg-[--color-bg-primary]"
+                    className="group flex gap-3 p-4 rounded-lg bg-[--color-bg-primary]"
                   >
                     {comment.user && (
                       <Avatar
@@ -240,6 +282,15 @@ export function TicketDetail() {
                           </span>
                           <span className="text-xs text-[--color-text-muted]">
                             {format(new Date(comment.$createdAt), 'MMM d, yyyy h:mm a')}
+                            {/* CMT-06: Show (edited) indicator if comment was edited */}
+                            {comment.$updatedAt &&
+                              new Date(comment.$updatedAt).getTime() -
+                                new Date(comment.$createdAt).getTime() >
+                                1000 && (
+                              <span className="ml-1 text-xs text-[--color-text-muted] italic">
+                                (edited)
+                              </span>
+                            )}
                           </span>
                         </div>
                         <Button
@@ -274,6 +325,15 @@ export function TicketDetail() {
                                   </span>
                                   <span className="text-xs text-[--color-text-muted]">
                                     {format(new Date(reply.$createdAt), 'MMM d, yyyy h:mm a')}
+                                    {/* CMT-06: Show (edited) indicator for replies too */}
+                                    {reply.$updatedAt &&
+                                      new Date(reply.$updatedAt).getTime() -
+                                        new Date(reply.$createdAt).getTime() >
+                                        1000 && (
+                                      <span className="ml-1 italic">
+                                        (edited)
+                                      </span>
+                                    )}
                                   </span>
                                 </div>
                                 <p className="text-sm text-[--color-text-secondary]">
@@ -336,6 +396,22 @@ export function TicketDetail() {
                     </span>
                   )}
                 </dd>
+                {/* TKT-24: Show self-assign button if not assigned and user has permission */}
+                {!ticket.assignee &&
+                  user &&
+                  permissions.canAssignTickets &&
+                  ticket.assigneeId !== user.$id && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="mt-2 cursor-pointer"
+                    onClick={handleSelfAssign}
+                    isLoading={assignTicketMutation.isPending}
+                    leftIcon={<UserPlus className="h-4 w-4" />}
+                  >
+                    Assign to me
+                  </Button>
+                )}
               </div>
 
               {ticket.dueDate && (
@@ -344,6 +420,19 @@ export function TicketDetail() {
                   <dd className="flex items-center gap-2 text-[--color-text-primary]">
                     <Calendar className="h-4 w-4" />
                     {format(new Date(ticket.dueDate), 'MMM d, yyyy')}
+                  </dd>
+                </div>
+              )}
+
+              {/* Attachments */}
+              {ticket.attachments && ticket.attachments.length > 0 && (
+                <div>
+                  <dt className="text-sm text-[--color-text-muted] mb-1 flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" />
+                    Attachments ({ticket.attachments.length})
+                  </dt>
+                  <dd className="mt-2">
+                    <AttachmentList attachments={ticket.attachments} />
                   </dd>
                 </div>
               )}
@@ -377,6 +466,37 @@ export function TicketDetail() {
           isSubmitting={updateTicketMutation.isPending}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Ticket"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-[--color-text-secondary]">
+            Are you sure you want to delete this ticket? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={confirmDeleteTicket}
+              isLoading={deleteTicketMutation.isPending}
+              className="cursor-pointer bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -13,6 +13,7 @@ const COLLECTIONS = {
   TICKETS: process.env.APPWRITE_COLLECTION_TICKETS,
   COMMENTS: process.env.APPWRITE_COLLECTION_COMMENTS,
   ACTIVITY_LOG: process.env.APPWRITE_COLLECTION_ACTIVITY_LOGS,
+  NOTIFICATIONS: process.env.APPWRITE_COLLECTION_NOTIFICATIONS,
 };
 
 const PROJECT_ROLES = {
@@ -56,7 +57,7 @@ const PERMISSIONS = {
     canCreateTickets: true,
     canEditTickets: true,
     canDeleteTickets: false,
-    canAssignTickets: false,
+    canAssignTickets: true,
     canMoveTickets: true,
     canManageMembers: false,
     canEditProject: false,
@@ -112,13 +113,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -138,8 +139,7 @@ function sanitizeString(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
 }
 
 function sanitizeForJson(obj) {
@@ -185,6 +185,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const { action, ticketId, data } = body;
 
   if (!ticketId || typeof ticketId !== 'string') {
@@ -245,6 +248,14 @@ export default async function main({ req, res, log, error: logError }) {
           return res.json(error('You do not have permission to edit tickets', 403));
         }
 
+        // TKT-13: Add optimistic locking support
+        // If expectedVersion (document's $updatedAt) is provided, check for concurrent edits
+        if (data?.expectedVersion !== undefined) {
+          if (ticket.$updatedAt !== data.expectedVersion) {
+            return res.json(error('This ticket has been modified by another user. Please refresh and try again.', 409));
+          }
+        }
+
         const updateData = {};
         if (data?.title && typeof data.title === 'string') {
           if (data.title.trim().length < 5 || data.title.trim().length > 200) {
@@ -291,6 +302,34 @@ export default async function main({ req, res, log, error: logError }) {
           updateData.dueDate = data.dueDate || null;
         }
 
+        // Handle status change (convenience — also available via move-ticket)
+        if (data.status !== undefined) {
+          const VALID_STATUSES = ['backlog', 'todo', 'in_progress', 'in_review', 'done'];
+          if (!VALID_STATUSES.includes(data.status)) {
+            return res.json(error('Invalid status value', 400));
+          }
+          updateData.status = data.status;
+        }
+
+        // Handle assignee change (convenience — also available via assign action)
+        if (data.assigneeId !== undefined) {
+          if (data.assigneeId !== null && data.assigneeId !== '') {
+            // Verify assignee is a member of the project
+            try {
+              const assigneeMembership = await databases.listDocuments(
+                DATABASE_ID, COLLECTIONS.PROJECT_MEMBERS,
+                [Query.equal('projectId', ticket.projectId), Query.equal('userId', data.assigneeId), Query.limit(1)]
+              );
+              if (assigneeMembership.total === 0) {
+                return res.json(error('Assignee must be a member of the project', 400));
+              }
+            } catch (e) {
+              return res.json(error('Failed to verify assignee membership', 500));
+            }
+          }
+          updateData.assigneeId = data.assigneeId || null;
+        }
+
         if (Object.keys(updateData).length === 0) {
           return res.json(error('No valid update data provided'));
         }
@@ -329,6 +368,17 @@ export default async function main({ req, res, log, error: logError }) {
           return res.json(error('Invalid assignee ID format'));
         }
 
+        // Verify assignee is a member of the project
+        if (data.assigneeId) {
+          const assigneeMembership = await databases.listDocuments(
+            DATABASE_ID, COLLECTIONS.PROJECT_MEMBERS,
+            [Query.equal('projectId', ticket.projectId), Query.equal('userId', data.assigneeId), Query.limit(1)]
+          );
+          if (assigneeMembership.total === 0) {
+            return res.json(error('Assignee must be a member of the project', 400));
+          }
+        }
+
         const updated = await databases.updateDocument(
           DATABASE_ID,
           COLLECTIONS.TICKETS,
@@ -349,6 +399,24 @@ export default async function main({ req, res, log, error: logError }) {
           }
         );
 
+        // Create notification for assignee
+        if (data.assigneeId && data.assigneeId !== userId) {
+          try {
+            await databases.createDocument(DATABASE_ID, COLLECTIONS.NOTIFICATIONS, 'unique()', {
+              userId: data.assigneeId,
+              projectId: ticket.projectId,
+              type: 'ticket_assigned',
+              title: 'Ticket Assigned',
+              message: `You have been assigned to ticket: ${ticket.title}`,
+              read: false,
+              actionUrl: `/projects/${ticket.projectId}/tickets/${ticketId}`,
+            });
+          } catch (e) {
+            // Don't fail the assignment if notification creation fails
+            log('Failed to create assignment notification: ' + e.message);
+          }
+        }
+
         log(`Ticket ${ticketId} assigned to ${data?.assigneeId || 'none'} by user ${userId}`);
         return res.json(success(updated));
       }
@@ -356,6 +424,32 @@ export default async function main({ req, res, log, error: logError }) {
       case 'delete': {
         if (!hasPermission(role, 'canDeleteTickets')) {
           return res.json(error('You do not have permission to delete tickets', 403));
+        }
+
+        // Cascade delete comments
+        let commentOffset = 0;
+        while (true) {
+          const commentBatch = await databases.listDocuments(
+            DATABASE_ID, COLLECTIONS.COMMENTS,
+            [Query.equal('ticketId', ticketId), Query.limit(100), Query.offset(commentOffset)]
+          );
+          if (commentBatch.documents.length === 0) break;
+          for (const comment of commentBatch.documents) {
+            await databases.deleteDocument(DATABASE_ID, COLLECTIONS.COMMENTS, comment.$id);
+          }
+          if (commentBatch.documents.length < 100) break;
+          // Don't increment offset since we're deleting
+        }
+
+        // Cascade delete activity logs
+        while (true) {
+          const activities = await databases.listDocuments(
+            DATABASE_ID, COLLECTIONS.ACTIVITY_LOG,
+            [Query.equal('ticketId', ticketId), Query.limit(100)]
+          );
+          if (activities.documents.length === 0) break;
+          await Promise.all(activities.documents.map(a => databases.deleteDocument(DATABASE_ID, COLLECTIONS.ACTIVITY_LOG, a.$id)));
+          if (activities.documents.length < 100) break;
         }
 
         await databases.deleteDocument(DATABASE_ID, COLLECTIONS.TICKETS, ticketId);

@@ -174,11 +174,24 @@ export function useDeleteNotification() {
       return { notificationId, userId };
     },
     onSuccess: ({ notificationId, userId }) => {
-      // Remove notification from list
+      // Remove notification from list and update unread count (NTF-04)
+      const notifications = queryClient.getQueryData<Notification[]>(
+        notificationKeys.list(userId)
+      ) ?? [];
+      const deleted = notifications.find((n) => n.$id === notificationId);
+      
       queryClient.setQueryData<Notification[]>(
         notificationKeys.list(userId),
         (old = []) => old.filter((n) => n.$id !== notificationId)
       );
+
+      // If the deleted notification was unread, decrement count
+      if (deleted && !deleted.read) {
+        queryClient.setQueryData<number>(
+          notificationKeys.unreadCount(userId),
+          (old = 0) => Math.max(0, old - 1)
+        );
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message);

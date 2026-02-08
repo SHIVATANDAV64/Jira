@@ -117,13 +117,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -167,8 +167,7 @@ function sanitizeForJson(obj) {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;')
-      .replace(/\//g, '&#x2F;');
+      .replace(/'/g, '&#x27;');
   }
   if (typeof obj !== 'object' || obj === null) return obj;
   if (Array.isArray(obj)) return obj.map(sanitizeForJson);
@@ -198,6 +197,60 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
+
+  // TKT-15: Handle reorder action (bulk ticket reordering)
+  if (body.action === 'reorder' || body.action === 'bulk_reorder') {
+    const { projectId, tickets: ticketsToReorder } = body;
+    
+    if (!projectId) {
+      return res.json(error('Project ID is required for reorder', 400));
+    }
+
+    if (!Array.isArray(ticketsToReorder) || ticketsToReorder.length === 0) {
+      return res.json(error('Tickets array is required with at least one ticket for reorder', 400));
+    }
+
+    // Validate tickets array format: [{ ticketId, order }, ...]
+    for (const t of ticketsToReorder) {
+      if (!t.ticketId || typeof t.ticketId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(t.ticketId)) {
+        return res.json(error('Invalid ticket ID format in reorder array', 400));
+      }
+      if (typeof t.order !== 'number' || !Number.isFinite(t.order) || t.order < 0) {
+        return res.json(error('Invalid order value in reorder array', 400));
+      }
+    }
+
+    const { databases } = createAdminClient();
+
+    try {
+      // Verify user's permission
+      const reorderRole = await getUserProjectRole(databases, projectId, userId);
+      if (!reorderRole) return res.json(error('You are not a member of this project', 403));
+      if (!hasPermission(reorderRole, 'canMoveTickets')) {
+        return res.json(error('You do not have permission to reorder tickets', 403));
+      }
+
+      // Verify all tickets belong to the same project
+      const updatePromises = ticketsToReorder.map(async (t) => {
+        const ticket = await databases.getDocument(DATABASE_ID, COLLECTIONS.TICKETS, t.ticketId);
+        if (ticket.projectId !== projectId) {
+          throw new Error(`Ticket ${t.ticketId} does not belong to project ${projectId}`);
+        }
+        return databases.updateDocument(DATABASE_ID, COLLECTIONS.TICKETS, t.ticketId, { order: t.order });
+      });
+      
+      await Promise.all(updatePromises);
+
+      return res.json(success({ message: 'Tickets reordered', count: ticketsToReorder.length }));
+    } catch (err) {
+      logError(`Error reordering tickets: ${err.message}`);
+      return res.json(error('Failed to reorder tickets: ' + err.message, 500));
+    }
+  }
+
   const { ticketId, newStatus, newOrder } = body;
 
   if (!ticketId || typeof ticketId !== 'string') {

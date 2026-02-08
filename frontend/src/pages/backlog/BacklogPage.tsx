@@ -14,7 +14,7 @@ export function BacklogPage() {
   const isLoading = projectLoading || ticketsLoading;
 
   const handleTicketClick = (ticketId: string) => {
-    navigate(`/tickets/${ticketId}`);
+    navigate(`/projects/${projectId}/tickets/${ticketId}`);
   };
 
   if (isLoading) {

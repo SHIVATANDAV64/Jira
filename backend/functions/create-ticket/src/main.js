@@ -132,13 +132,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -158,8 +158,7 @@ function sanitizeString(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
 }
 
 function sanitizeForJson(obj) {
@@ -252,6 +251,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const validation = validateTicket(body);
   
   if (!validation.valid) {
@@ -279,28 +281,59 @@ export default async function main({ req, res, log, error: logError }) {
       body.projectId
     );
 
-    // Get next ticket number
-    const existingTickets = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.TICKETS,
-      [
-        Query.equal('projectId', body.projectId),
-        Query.orderDesc('ticketNumber'),
-        Query.limit(1),
-      ]
-    );
+    // Get next ticket number with retry logic for race condition handling
+    // TKT-08: Implement retry loop to handle concurrent creates
+    const MAX_RETRY = 3;
+    let nextTicketNumber = null;
+    let lastError = null;
 
-    const nextTicketNumber = existingTickets.documents.length > 0
-      ? existingTickets.documents[0].ticketNumber + 1
-      : 1;
+    for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
+      try {
+        const existingTickets = await databases.listDocuments(
+          DATABASE_ID,
+          COLLECTIONS.TICKETS,
+          [
+            Query.equal('projectId', body.projectId),
+            Query.orderDesc('ticketNumber'),
+            Query.limit(1),
+          ]
+        );
 
-    // Get max order for the initial status column
+        nextTicketNumber = existingTickets.documents.length > 0
+          ? existingTickets.documents[0].ticketNumber + 1
+          : 1;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < MAX_RETRY - 1) {
+          // Wait a bit before retry
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+        }
+      }
+    }
+
+    if (nextTicketNumber === null) {
+      logError(`Failed to generate ticket number after ${MAX_RETRY} attempts: ${lastError.message}`);
+      return res.json(error('Failed to generate ticket number', 500));
+    }
+
+    // TKT-09: Determine target status: accept optional status field
+    // Only allow 'backlog' or 'todo' as initial statuses
+    let targetStatus = TICKET_STATUSES.TODO;
+    if (body.status) {
+      const allowedInitialStatuses = [TICKET_STATUSES.BACKLOG, TICKET_STATUSES.TODO];
+      if (allowedInitialStatuses.includes(body.status)) {
+        targetStatus = body.status;
+      }
+    }
+
+    // Get max order for the target status column
     const ticketsInStatus = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.TICKETS,
       [
         Query.equal('projectId', body.projectId),
-        Query.equal('status', TICKET_STATUSES.TODO),
+        Query.equal('status', targetStatus),
         Query.orderDesc('order'),
         Query.limit(1),
       ]
@@ -310,26 +343,55 @@ export default async function main({ req, res, log, error: logError }) {
       ? ticketsInStatus.documents[0].order + 1
       : 0;
 
-    // Create ticket
-    const ticket = await databases.createDocument(
-      DATABASE_ID,
-      COLLECTIONS.TICKETS,
-      generateId(),
-      {
-        projectId: body.projectId,
-        ticketNumber: nextTicketNumber,
-        title: body.title,
-        description: body.description || '',
-        type: body.type,
-        status: TICKET_STATUSES.TODO,
-        priority: body.priority,
-        reporterId: userId,
-        assigneeId: body.assigneeId || null,
-        labels: body.labels || [],
-        dueDate: body.dueDate || null,
-        order: nextOrder,
+    // Create ticket with retry logic for duplicate handling
+    let ticket = null;
+    for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
+      try {
+        ticket = await databases.createDocument(
+          DATABASE_ID,
+          COLLECTIONS.TICKETS,
+          generateId(),
+          {
+            projectId: body.projectId,
+            ticketNumber: nextTicketNumber,
+            title: body.title,
+            description: body.description || '',
+            type: body.type,
+            status: targetStatus,
+            priority: body.priority,
+            reporterId: userId,
+            assigneeId: body.assigneeId || null,
+            labels: body.labels || [],
+            dueDate: body.dueDate || null,
+            order: nextOrder,
+          }
+        );
+        break;
+      } catch (err) {
+        if (attempt < MAX_RETRY - 1 && err.message && err.message.includes('duplicate')) {
+          // Duplicate ticket number - retry with incremented number
+          const existingTickets = await databases.listDocuments(
+            DATABASE_ID,
+            COLLECTIONS.TICKETS,
+            [
+              Query.equal('projectId', body.projectId),
+              Query.orderDesc('ticketNumber'),
+              Query.limit(1),
+            ]
+          );
+          nextTicketNumber = existingTickets.documents.length > 0
+            ? existingTickets.documents[0].ticketNumber + 1
+            : nextTicketNumber + 1;
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+        } else {
+          throw err;
+        }
       }
-    );
+    }
+
+    if (!ticket) {
+      return res.json(error('Failed to create ticket after multiple attempts', 500));
+    }
 
     // Log activity (sanitize data before storing)
     await databases.createDocument(

@@ -12,15 +12,37 @@ export const commentKeys = {
   list: (ticketId: string) => [...commentKeys.lists(), ticketId] as const,
 };
 
-// Helper to organize comments into threads
+// Helper to organize comments into threads (CMT-01: supports nested replies)
 function organizeComments(allComments: Comment[]): Comment[] {
-  const parentComments = allComments.filter((c) => !c.parentId);
-  const replies = allComments.filter((c) => c.parentId);
+  const commentMap = new Map<string, Comment>();
+  
+  // First pass: create a map of all comments with empty replies arrays
+  allComments.forEach((c) => {
+    commentMap.set(c.$id, { ...c, replies: [] });
+  });
 
-  return parentComments.map((parent) => ({
-    ...parent,
-    replies: replies.filter((r) => r.parentId === parent.$id),
-  }));
+  const rootComments: Comment[] = [];
+
+  // Second pass: attach each reply to its closest ancestor that exists
+  allComments.forEach((c) => {
+    if (!c.parentId) {
+      rootComments.push(commentMap.get(c.$id)!);
+    } else {
+      // Walk up the parent chain to find the nearest existing parent
+      let parentId: string | undefined = c.parentId;
+      let parent = commentMap.get(parentId);
+      
+      if (parent) {
+        parent.replies = parent.replies || [];
+        parent.replies.push(commentMap.get(c.$id)!);
+      } else {
+        // Orphaned reply — show as root comment to avoid data loss
+        rootComments.push(commentMap.get(c.$id)!);
+      }
+    }
+  });
+
+  return rootComments;
 }
 
 // Hook to fetch comments for a ticket
@@ -80,13 +102,21 @@ export function useComments(ticketId: string | undefined) {
 }
 
 // Mutation hooks
-export function useCreateComment(ticketId: string | undefined) {
+export function useCreateComment(
+  ticketId: string | undefined,
+  ticketContext?: {
+    reporterId: string;
+    projectId: string;
+    ticketKey: string;
+    ticketTitle: string;
+  }
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
       if (!ticketId) throw new Error('Ticket ID is required');
-      const response = await commentService.createComment(ticketId, content, parentId);
+      const response = await commentService.createComment(ticketId, content, parentId, ticketContext);
       if (!response.success) {
         throw new Error(response.error || 'Failed to create comment');
       }
@@ -134,8 +164,34 @@ export function useDeleteComment(ticketId: string | undefined) {
       }
       return commentId;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentKeys.list(ticketId ?? '') });
+    onSuccess: (deletedCommentId) => {
+      // CMT-02: Filter out the deleted comment and any orphaned replies (children of deleted comment)
+      queryClient.setQueryData<Comment[]>(
+        commentKeys.list(ticketId ?? ''),
+        (oldComments = []) => {
+          // First, collect all comments and replies
+          const allComments = new Map<string, Comment>();
+          oldComments.forEach((c) => {
+            allComments.set(c.$id, { ...c });
+          });
+
+          // Remove the deleted comment
+          allComments.delete(deletedCommentId);
+
+          // If there are replies, also remove any that had the deleted comment as parent
+          const toRemove: string[] = [];
+          allComments.forEach((comment) => {
+            if (comment.parentId === deletedCommentId) {
+              toRemove.push(comment.$id);
+            }
+          });
+          toRemove.forEach((id) => allComments.delete(id));
+
+          // Reorganize what's left
+          return organizeComments(Array.from(allComments.values()));
+        }
+      );
+      
       toast.success('Comment deleted');
     },
     onError: (error: Error) => {

@@ -34,32 +34,20 @@ export function useSprints(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
-  // Realtime subscription
+  // Realtime subscription — invalidate to refetch through authorized endpoints
   useEffect(() => {
     if (!projectId) return;
 
     const unsubscribe = client.subscribe(
       `databases.${DATABASE_ID}.collections.${COLLECTIONS.SPRINTS}.documents`,
       (response) => {
-        const { events, payload } = response as { events: string[]; payload: Sprint };
-        const eventType = events[0] || '';
+        const { payload } = response as { payload: Sprint };
         const document = payload;
 
         // Only process events for this project
         if (document.projectId !== projectId) return;
 
-        queryClient.setQueryData<Sprint[]>(sprintKeys.list(projectId), (old = []) => {
-          if (eventType.includes('create')) {
-            return [document, ...old];
-          } else if (eventType.includes('update')) {
-            return old.map((s) => (s.$id === document.$id ? document : s));
-          } else if (eventType.includes('delete')) {
-            return old.filter((s) => s.$id !== document.$id);
-          }
-          return old;
-        });
-
-        // Also invalidate active sprint cache
+        queryClient.invalidateQueries({ queryKey: sprintKeys.list(projectId) });
         queryClient.invalidateQueries({ queryKey: sprintKeys.active(projectId) });
       }
     );
@@ -182,8 +170,8 @@ export function useStartSprint() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (sprintId: string) => {
-      const response = await sprintService.startSprint(sprintId);
+    mutationFn: async ({ sprintId, projectId }: { sprintId: string; projectId: string }) => {
+      const response = await sprintService.startSprint(sprintId, projectId);
       if (!response.success) {
         throw new Error(response.error || 'Failed to start sprint');
       }
@@ -230,8 +218,8 @@ export function useDeleteSprint() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (sprintId: string) => {
-      const response = await sprintService.deleteSprint(sprintId);
+    mutationFn: async ({ sprintId, projectId }: { sprintId: string; projectId?: string }) => {
+      const response = await sprintService.deleteSprint(sprintId, projectId);
       if (!response.success) {
         throw new Error(response.error || 'Failed to delete sprint');
       }

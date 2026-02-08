@@ -65,13 +65,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -91,8 +91,7 @@ function sanitizeString(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
 }
 
 function sanitizeForJson(obj) {
@@ -124,9 +123,11 @@ function validateProject(data) {
 
   if (data.description && typeof data.description !== 'string') {
     errors.push('Description must be a string');
-  } else if (data.description && data.description.length > 1000) {
-    errors.push('Description must be less than 1000 characters');
+  } else if (data.description && data.description.length > 2000) {
+    errors.push('Description must be less than 2000 characters');
   }
+
+  // PROJ-08: Note - description max-length is now consistently 2000 across create and manage
 
   return { valid: errors.length === 0, errors };
 }
@@ -143,6 +144,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const validation = validateProject(body);
   
   if (!validation.valid) {
@@ -152,6 +156,15 @@ export default async function main({ req, res, log, error: logError }) {
   const { databases, teams } = createAdminClient();
 
   try {
+    // Check for duplicate project key
+    const existingProjects = await databases.listDocuments(
+      DATABASE_ID, COLLECTIONS.PROJECTS,
+      [Query.equal('key', body.key), Query.limit(1)]
+    );
+    if (existingProjects.total > 0) {
+      return res.json(error('A project with this key already exists. Please choose a different key.', 400));
+    }
+
     // Create team for the project
     const team = await teams.create(
       generateId(),

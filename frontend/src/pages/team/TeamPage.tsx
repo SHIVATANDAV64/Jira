@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users,
@@ -20,6 +20,7 @@ import {
   useInviteMember,
   useUpdateMemberRole,
   useRemoveMember,
+  useLeaveProject,
 } from '@/hooks/useProjectMembers';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
@@ -34,12 +35,21 @@ interface InviteMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   projectId: string;
+  inviterRole?: ProjectRole;
 }
 
-function InviteMemberModal({ isOpen, onClose, projectId }: InviteMemberModalProps) {
+function InviteMemberModal({ isOpen, onClose, projectId, inviterRole = 'admin' }: InviteMemberModalProps) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<ProjectRole>('developer');
   const inviteMember = useInviteMember(projectId);
+
+  // Role hierarchy: admin > manager > developer > viewer
+  const roleHierarchy: Record<ProjectRole, number> = {
+    admin: 4,
+    manager: 3,
+    developer: 2,
+    viewer: 1,
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,10 +65,15 @@ function InviteMemberModal({ isOpen, onClose, projectId }: InviteMemberModalProp
     }
   };
 
-  const roleOptions = Object.entries(PROJECT_ROLES).map(([value, config]) => ({
+  const allRoleOptions = Object.entries(PROJECT_ROLES).map(([value, config]) => ({
     value,
     label: config.label,
   }));
+
+  // Filter roles based on inviter's role
+  const roleOptions = allRoleOptions.filter(
+    (option) => roleHierarchy[option.value as ProjectRole] <= roleHierarchy[inviterRole]
+  );
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Invite Team Member">
@@ -102,9 +117,10 @@ interface MemberRowProps {
   projectId: string;
   currentUserId: string;
   isAdmin: boolean;
+  currentUserRole?: ProjectRole;
 }
 
-function MemberRow({ member, projectId, currentUserId, isAdmin }: MemberRowProps) {
+function MemberRow({ member, projectId, currentUserId, isAdmin, currentUserRole = 'viewer' }: MemberRowProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showRoleSelect, setShowRoleSelect] = useState(false);
   const updateRole = useUpdateMemberRole(projectId);
@@ -112,6 +128,14 @@ function MemberRow({ member, projectId, currentUserId, isAdmin }: MemberRowProps
 
   const isCurrentUser = member.userId === currentUserId;
   const canModify = isAdmin && !isCurrentUser;
+
+  // Role hierarchy for filtering
+  const roleHierarchy: Record<ProjectRole, number> = {
+    admin: 4,
+    manager: 3,
+    developer: 2,
+    viewer: 1,
+  };
 
   const handleRoleChange = async (newRole: ProjectRole) => {
     try {
@@ -131,10 +155,17 @@ function MemberRow({ member, projectId, currentUserId, isAdmin }: MemberRowProps
     }
   };
 
-  const roleOptions = Object.entries(PROJECT_ROLES).map(([value, config]) => ({
+  const allRoleOptions = Object.entries(PROJECT_ROLES).map(([value, config]) => ({
     value,
     label: config.label,
   }));
+
+  // Filter roles based on current user's role
+  const roleOptions = currentUserRole
+    ? allRoleOptions.filter(
+        (option) => roleHierarchy[option.value as ProjectRole] <= roleHierarchy[currentUserRole]
+      )
+    : allRoleOptions;
 
   return (
     <div className="flex items-center justify-between p-4 hover:bg-[--color-bg-hover] rounded-lg transition-colors">
@@ -224,15 +255,21 @@ export function TeamPage() {
     selectedProjectId || undefined
   );
 
-  // Set first project as default when projects load
-  useMemo(() => {
+  // Set first project as default when projects load (using useEffect for side effects)
+  useEffect(() => {
     if (projects.length > 0 && !selectedProjectId) {
       const firstProject = projects[0];
       if (firstProject) {
         setSelectedProjectId(firstProject.$id);
       }
     }
-  }, [projects, selectedProjectId]);
+  }, [projects]);
+
+  // Reset search filter when project selection changes (TEAM-10)
+  const handleProjectChange = (newProjectId: string) => {
+    setSelectedProjectId(newProjectId);
+    setSearchQuery('');
+  };
 
   const selectedProject = useMemo(
     () => projects.find((p) => p.$id === selectedProjectId),
@@ -314,7 +351,7 @@ export function TeamPage() {
         <div className="sm:w-72">
           <Select
             value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
+            onChange={(e) => handleProjectChange(e.target.value)}
             options={projectOptions}
             placeholder="Select a project"
           />
@@ -347,12 +384,17 @@ export function TeamPage() {
                 </p>
               </div>
             </div>
-            <Link
-              to={`/projects/${selectedProject.$id}`}
-              className="text-sm text-[--color-primary-400] hover:text-[--color-primary-300]"
-            >
-              View Project
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/projects/${selectedProject.$id}`}
+                className="text-sm text-[--color-primary-400] hover:text-[--color-primary-300]"
+              >
+                View Project
+              </Link>
+              {!isAdmin && selectedProjectId && (
+                <LeaveProjectButton projectId={selectedProjectId} />
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -403,6 +445,7 @@ export function TeamPage() {
                 projectId={selectedProjectId}
                 currentUserId={user?.$id || ''}
                 isAdmin={isAdmin}
+                currentUserRole={currentUserMember?.role}
               />
             ))}
           </div>
@@ -431,8 +474,36 @@ export function TeamPage() {
           isOpen={showInviteModal}
           onClose={() => setShowInviteModal(false)}
           projectId={safeProjectId}
+          inviterRole={currentUserMember?.role}
         />
       )}
     </div>
+  );
+}
+
+interface LeaveProjectButtonProps {
+  projectId: string;
+}
+
+function LeaveProjectButton({ projectId }: LeaveProjectButtonProps) {
+  const leaveProject = useLeaveProject(projectId);
+
+  const handleLeave = async () => {
+    if (!confirm('Are you sure you want to leave this project? You will no longer have access to it.')) {
+      return;
+    }
+    leaveProject.mutate();
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-red-400 hover:text-red-300"
+      onClick={handleLeave}
+      isLoading={leaveProject.isPending}
+    >
+      Leave Project
+    </Button>
   );
 }

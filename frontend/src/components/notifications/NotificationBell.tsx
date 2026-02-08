@@ -227,7 +227,11 @@ function NotificationItem({ notification, onClose }: NotificationItemProps) {
     </div>
   );
 
-  if (notification.actionUrl) {
+  const isSafeUrl = (url: string): boolean => {
+    return url.startsWith('/') && !url.startsWith('//') && !url.includes(':');
+  };
+
+  if (notification.actionUrl && isSafeUrl(notification.actionUrl)) {
     return (
       <Link to={notification.actionUrl} onClick={handleClick}>
         {content}

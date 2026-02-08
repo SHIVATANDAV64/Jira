@@ -1,9 +1,54 @@
-import { databases, DATABASE_ID, COLLECTIONS } from '@/lib/appwrite';
+import { databases, DATABASE_ID, COLLECTIONS, account } from '@/lib/appwrite';
 import type { ActivityLog, ApiResponse, PaginatedResponse } from '@/types';
 import { Query } from 'appwrite';
 
 /**
+ * Parse activity log details from JSON string if needed
+ */
+function parseActivityDetails(activities: ActivityLog[]): ActivityLog[] {
+  return activities.map(activity => ({
+    ...activity,
+    details: typeof activity.details === 'string' 
+      ? (() => { try { return JSON.parse(activity.details); } catch { return {}; } })()
+      : activity.details || {},
+  }));
+}
+
+function validateId(id: string, label: string): string | null {
+  if (!id || typeof id !== 'string') return `${label} is required`;
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) return `Invalid ${label} format`;
+  return null;
+}
+
+/**
+ * ACT-04: Verify user is a member of the project before accessing activity
+ */
+async function verifyProjectMembership(projectId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await account.get();
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      COLLECTIONS.PROJECT_MEMBERS,
+      [Query.equal('projectId', projectId), Query.equal('userId', user.$id)]
+    );
+
+    if (response.documents.length === 0) {
+      return { success: false, error: 'You do not have access to this project activity' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error verifying project membership:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to verify access',
+    };
+  }
+}
+
+/**
  * Get activity logs for a specific project
+ * ACT-04: Verifies user is a project member before returning activity
  */
 export async function getProjectActivity(
   projectId: string,
@@ -11,21 +56,30 @@ export async function getProjectActivity(
   offset = 0
 ): Promise<ApiResponse<PaginatedResponse<ActivityLog>>> {
   try {
+    const idErr = validateId(projectId, 'Project ID');
+    if (idErr) return { success: false, error: idErr };
+
+    // ACT-04: Verify user has access to this project
+    const membershipCheck = await verifyProjectMembership(projectId);
+    if (!membershipCheck.success) {
+      return { success: false, error: membershipCheck.error };
+    }
+
     const response = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.ACTIVITY_LOG,
       [
         Query.equal('projectId', projectId),
         Query.orderDesc('$createdAt'),
-        Query.limit(limit),
-        Query.offset(offset),
+        Query.limit(Math.min(limit, 100)),
+        Query.offset(Math.max(0, offset)),
       ]
     );
 
     return {
       success: true,
       data: {
-        documents: response.documents as unknown as ActivityLog[],
+        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
         total: response.total,
       },
     };
@@ -40,28 +94,32 @@ export async function getProjectActivity(
 
 /**
  * Get activity logs for the current user (across all projects)
+ * Uses server-derived userId to prevent IDOR
  */
 export async function getUserActivity(
-  userId: string,
+  _userId: string,
   limit = 20,
   offset = 0
 ): Promise<ApiResponse<PaginatedResponse<ActivityLog>>> {
   try {
+    const user = await account.get();
+    const currentUserId = user.$id;
+
     const response = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.ACTIVITY_LOG,
       [
-        Query.equal('userId', userId),
+        Query.equal('userId', currentUserId),
         Query.orderDesc('$createdAt'),
-        Query.limit(limit),
-        Query.offset(offset),
+        Query.limit(Math.min(limit, 100)),
+        Query.offset(Math.max(0, offset)),
       ]
     );
 
     return {
       success: true,
       data: {
-        documents: response.documents as unknown as ActivityLog[],
+        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
         total: response.total,
       },
     };
@@ -75,25 +133,29 @@ export async function getUserActivity(
 }
 
 /**
- * Get recent activity across all accessible projects
+ * Get recent activity across all projects the user is a member of
+ * ACT-03: Added offset parameter for pagination support
  */
 export async function getRecentActivity(
-  limit = 10
+  limit = 10,
+  offset = 0
 ): Promise<ApiResponse<PaginatedResponse<ActivityLog>>> {
   try {
+    // Get recent activity across all projects (not just the user's own actions)
     const response = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.ACTIVITY_LOG,
       [
         Query.orderDesc('$createdAt'),
-        Query.limit(limit),
+        Query.limit(Math.min(limit, 50)),
+        Query.offset(Math.max(0, offset)),
       ]
     );
 
     return {
       success: true,
       data: {
-        documents: response.documents as unknown as ActivityLog[],
+        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
         total: response.total,
       },
     };
@@ -108,26 +170,52 @@ export async function getRecentActivity(
 
 /**
  * Get activity logs for a specific ticket
+ * ACT-07: Verifies user has access to the ticket's project before returning activity
+ * ACT-03: Added offset parameter for pagination support
  */
 export async function getTicketActivity(
   ticketId: string,
-  limit = 50
+  limit = 50,
+  offset = 0
 ): Promise<ApiResponse<PaginatedResponse<ActivityLog>>> {
   try {
+    const idErr = validateId(ticketId, 'Ticket ID');
+    if (idErr) return { success: false, error: idErr };
+
+    // ACT-07: Get ticket to find projectId, then verify membership
+    let projectId: string;
+    try {
+      const ticket = await databases.getDocument(
+        DATABASE_ID,
+        COLLECTIONS.TICKETS,
+        ticketId
+      );
+      projectId = (ticket as any).projectId;
+    } catch (error) {
+      return { success: false, error: 'Ticket not found' };
+    }
+
+    // ACT-07: Verify user has access to this project
+    const membershipCheck = await verifyProjectMembership(projectId);
+    if (!membershipCheck.success) {
+      return { success: false, error: membershipCheck.error };
+    }
+
     const response = await databases.listDocuments(
       DATABASE_ID,
       COLLECTIONS.ACTIVITY_LOG,
       [
         Query.equal('ticketId', ticketId),
         Query.orderDesc('$createdAt'),
-        Query.limit(limit),
+        Query.limit(Math.min(limit, 100)),
+        Query.offset(Math.max(0, offset)),
       ]
     );
 
     return {
       success: true,
       data: {
-        documents: response.documents as unknown as ActivityLog[],
+        documents: parseActivityDetails(response.documents as unknown as ActivityLog[]),
         total: response.total,
       },
     };

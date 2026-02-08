@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
   Bug,
+  X,
 } from 'lucide-react';
 
 const navigation = [
@@ -18,16 +19,36 @@ const secondaryNavigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-[--color-bg-secondary] border-r border-[--color-border-primary]">
+    <aside
+      className={clsx(
+        'fixed left-0 top-0 z-50 h-screen w-64 bg-[--color-bg-secondary] border-r border-[--color-border-primary] transition-transform duration-300 ease-in-out',
+        // NAV-03: Mobile responsive — hidden by default on small screens
+        isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      )}
+    >
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 px-6 border-b border-[--color-border-primary]">
-          <Bug className="h-8 w-8 text-[--color-primary-500]" />
-          <span className="text-xl font-bold text-[--color-text-primary]">
-            BugTracker
-          </span>
+        <div className="flex h-16 items-center justify-between px-6 border-b border-[--color-border-primary]">
+          <div className="flex items-center gap-2">
+            <Bug className="h-8 w-8 text-[--color-primary-500]" />
+            <span className="text-xl font-bold text-[--color-text-primary]">
+              BugTracker
+            </span>
+          </div>
+          {/* Mobile close button */}
+          <button
+            onClick={onClose}
+            className="md:hidden rounded-lg p-1.5 text-[--color-text-muted] hover:bg-[--color-bg-hover] cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Navigation */}

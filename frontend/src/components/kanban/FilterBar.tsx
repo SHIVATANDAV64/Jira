@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import type { TicketFilters, TicketStatus, TicketPriority, TicketType, ProjectMember } from '@/types';
-import { TICKET_STATUSES, TICKET_PRIORITIES, TICKET_TYPES } from '@/lib/constants';
+import { TICKET_STATUSES, TICKET_PRIORITIES, TICKET_TYPES, DEFAULT_LABELS } from '@/lib/constants';
 
 interface FilterBarProps {
   filters: TicketFilters;
@@ -15,6 +15,13 @@ interface FilterBarProps {
 export function FilterBar({ filters, onFiltersChange, members }: FilterBarProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [searchValue, setSearchValue] = useState(filters.search || '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const activeFilterCount = [
     filters.status?.length,
@@ -27,10 +34,10 @@ export function FilterBar({ filters, onFiltersChange, members }: FilterBarProps)
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
     // Debounce search
-    const timeoutId = setTimeout(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
       onFiltersChange({ ...filters, search: value || undefined });
     }, 300);
-    return () => clearTimeout(timeoutId);
   };
 
   const handleStatusToggle = (status: TicketStatus) => {
@@ -70,6 +77,17 @@ export function FilterBar({ filters, onFiltersChange, members }: FilterBarProps)
     onFiltersChange({
       ...filters,
       assigneeId,
+    });
+  };
+
+  const handleLabelToggle = (label: string) => {
+    const currentLabels = filters.labels || [];
+    const newLabels = currentLabels.includes(label)
+      ? currentLabels.filter((l) => l !== label)
+      : [...currentLabels, label];
+    onFiltersChange({
+      ...filters,
+      labels: newLabels.length > 0 ? newLabels : undefined,
     });
   };
 
@@ -186,6 +204,20 @@ export function FilterBar({ filters, onFiltersChange, members }: FilterBarProps)
               ))}
             </div>
           </FilterSection>
+
+          {/* Labels Filter */}
+          <FilterSection title="Labels">
+            <div className="flex flex-wrap gap-2">
+              {DEFAULT_LABELS.map((label) => (
+                <FilterChip
+                  key={label}
+                  label={label}
+                  selected={filters.labels?.includes(label) || false}
+                  onClick={() => handleLabelToggle(label)}
+                />
+              ))}
+            </div>
+          </FilterSection>
         </div>
       )}
 
@@ -238,6 +270,17 @@ export function FilterBar({ filters, onFiltersChange, members }: FilterBarProps)
               </button>
             </Badge>
           )}
+          {filters.labels?.map((label) => (
+            <Badge key={label} variant="default" className="gap-1">
+              {label}
+              <button
+                onClick={() => handleLabelToggle(label)}
+                className="hover:bg-white/20 rounded-full p-0.5 cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
         </div>
       )}
     </div>

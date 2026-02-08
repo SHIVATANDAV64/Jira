@@ -4,12 +4,8 @@ import { Client, Account, Databases, Storage, Teams, Functions } from 'appwrite'
 const APPWRITE_ENDPOINT = import.meta.env.VITE_APPWRITE_ENDPOINT;
 const APPWRITE_PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 
-if (!APPWRITE_ENDPOINT) {
-  console.error('VITE_APPWRITE_ENDPOINT is not set. Please configure your environment variables.');
-}
-
-if (!APPWRITE_PROJECT_ID) {
-  console.error('VITE_APPWRITE_PROJECT_ID is not set. Please configure your environment variables.');
+if (!APPWRITE_ENDPOINT || !APPWRITE_PROJECT_ID) {
+  throw new Error('Required application configuration is missing. Please check your setup.');
 }
 
 // Initialize Appwrite client
@@ -71,10 +67,10 @@ export function getAvatarUrl(_userId: string, name: string): string {
 
 // Helper to get file preview URL
 export function getFilePreviewUrl(bucketId: string, fileId: string): string {
-  return `${APPWRITE_ENDPOINT}/storage/buckets/${bucketId}/files/${fileId}/preview?project=${APPWRITE_PROJECT_ID}`;
+  return `${APPWRITE_ENDPOINT}/storage/buckets/${encodeURIComponent(bucketId)}/files/${encodeURIComponent(fileId)}/preview?project=${encodeURIComponent(APPWRITE_PROJECT_ID)}`;
 }
 
 // Helper to get file download URL
 export function getFileDownloadUrl(bucketId: string, fileId: string): string {
-  return `${APPWRITE_ENDPOINT}/storage/buckets/${bucketId}/files/${fileId}/download?project=${APPWRITE_PROJECT_ID}`;
+  return `${APPWRITE_ENDPOINT}/storage/buckets/${encodeURIComponent(bucketId)}/files/${encodeURIComponent(fileId)}/download?project=${encodeURIComponent(APPWRITE_PROJECT_ID)}`;
 }

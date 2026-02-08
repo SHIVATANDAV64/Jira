@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Bug } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/common/Button';
@@ -13,20 +13,49 @@ export function Register() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { register, loginWithGoogle } = useAuth();
+  const { register, loginWithGoogle, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string })?.from || '/dashboard';
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+    const errors: string[] = [];
+    
+    if (name.trim().length < 2 || name.trim().length > 100) {
+      errors.push('Name must be between 2 and 100 characters');
     }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errors.push('Please enter a valid email address');
+    }
+    
+    if (password !== confirmPassword) {
+      errors.push('Passwords do not match');
+    }
+    if (password.length < 8 || password.length > 128) {
+      errors.push('Password must be between 8 and 128 characters');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+    
+    if (errors.length > 0) {
+      setError(errors.join('. '));
       return;
     }
 
@@ -34,9 +63,21 @@ export function Register() {
 
     try {
       await register(email, password, name);
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (err) {
-      setError('Failed to create account. Email may already be in use.');
+      // AUTH-04: Differentiate account creation vs login failure
+      if (err instanceof Error) {
+        if (err.message.includes('Account created successfully')) {
+          // Account exists but auto-login failed
+          setError(err.message);
+        } else if (err.message.includes('already') || err.message.includes('unique')) {
+          setError('An account with this email already exists. Please sign in instead.');
+        } else {
+          setError(err.message || 'Failed to create account. Please try again.');
+        }
+      } else {
+        setError('Failed to create account. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -92,9 +133,24 @@ export function Register() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
+              placeholder="Min 8 chars, uppercase, lowercase, number"
               required
             />
+
+            <div className="text-xs space-y-1 text-[--color-text-tertiary]">
+              <p className={password.length >= 8 ? 'text-green-500' : ''}>
+                {password.length >= 8 ? '✓' : '○'} At least 8 characters
+              </p>
+              <p className={/[A-Z]/.test(password) ? 'text-green-500' : ''}>
+                {/[A-Z]/.test(password) ? '✓' : '○'} One uppercase letter
+              </p>
+              <p className={/[a-z]/.test(password) ? 'text-green-500' : ''}>
+                {/[a-z]/.test(password) ? '✓' : '○'} One lowercase letter
+              </p>
+              <p className={/[0-9]/.test(password) ? 'text-green-500' : ''}>
+                {/[0-9]/.test(password) ? '✓' : '○'} One number
+              </p>
+            </div>
 
             <Input
               label="Confirm password"
@@ -124,7 +180,7 @@ export function Register() {
             type="button"
             variant="secondary"
             className="w-full"
-            onClick={loginWithGoogle}
+            onClick={() => loginWithGoogle()}
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path

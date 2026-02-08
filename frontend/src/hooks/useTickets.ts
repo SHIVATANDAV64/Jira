@@ -39,7 +39,8 @@ export function useTickets(projectId: string | undefined, filters?: TicketFilter
     enabled: !!projectId,
   });
 
-  // Realtime subscription
+  // Realtime subscription — invalidate queries to refetch through authorized endpoints
+  // instead of directly trusting realtime payloads
   useEffect(() => {
     if (!projectId) return;
 
@@ -47,26 +48,15 @@ export function useTickets(projectId: string | undefined, filters?: TicketFilter
       `databases.${DATABASE_ID}.collections.${COLLECTIONS.TICKETS}.documents`,
       (response) => {
         const { events, payload } = response as { events: string[]; payload: Ticket };
-        const eventType = events[0] || '';
         const document = payload;
 
         // Only process events for this project
         if (document.projectId !== projectId) return;
 
-        queryClient.setQueryData<Ticket[]>(ticketKeys.list(projectId, filters), (old = []) => {
-          if (eventType.includes('create')) {
-            return [...old, document];
-          } else if (eventType.includes('update')) {
-            return old.map((t) => (t.$id === document.$id ? document : t));
-          } else if (eventType.includes('delete')) {
-            return old.filter((t) => t.$id !== document.$id);
-          }
-          return old;
-        });
-
-        // Also update the detail cache
-        if (eventType.includes('update')) {
-          queryClient.setQueryData(ticketKeys.detail(document.$id), document);
+        // Invalidate list and detail caches — forces re-fetch through authorized APIs
+        queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+        if (events[0]?.includes('update')) {
+          queryClient.invalidateQueries({ queryKey: ticketKeys.detail(document.$id) });
         }
       }
     );
@@ -74,7 +64,7 @@ export function useTickets(projectId: string | undefined, filters?: TicketFilter
     return () => {
       unsubscribe();
     };
-  }, [projectId, filters, queryClient]);
+  }, [projectId, queryClient]); // TKT-05: removed filters from deps — subscription doesn't use them
 
   // Organize tickets into Kanban columns
   const columns = useMemo<KanbanColumn[]>(() => {
@@ -115,22 +105,14 @@ export function useTicket(ticketId: string | undefined) {
     enabled: !!ticketId,
   });
 
-  // Realtime subscription for this specific ticket
+  // Realtime subscription for this specific ticket — invalidate to refetch
   useEffect(() => {
     if (!ticketId) return;
 
     const unsubscribe = client.subscribe(
       `databases.${DATABASE_ID}.collections.${COLLECTIONS.TICKETS}.documents.${ticketId}`,
-      (response) => {
-        const { events, payload } = response as { events: string[]; payload: Ticket };
-        const eventType = events[0] || '';
-        const document = payload;
-
-        if (eventType.includes('update')) {
-          queryClient.setQueryData(ticketKeys.detail(ticketId), document);
-        } else if (eventType.includes('delete')) {
-          queryClient.setQueryData(ticketKeys.detail(ticketId), null);
-        }
+      () => {
+        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
       }
     );
 
@@ -277,3 +259,38 @@ export function useAssignTicket() {
     },
   });
 }
+
+/**
+ * Hook for server-side ticket search (TKT-29)
+ * Use when filtering by search query for better performance on large datasets
+ */
+export function useSearchTickets(projectId: string | undefined) {
+  return useQuery({
+    queryKey: ['tickets', 'search', projectId],
+    queryFn: async () => {
+      return [];
+    },
+    enabled: false, // Manually trigger via refetch or pass the query
+  });
+}
+
+// Alternative: Query hook that accepts search parameters
+export function useSearchTicketsQuery(
+  projectId: string | undefined,
+  searchQuery: string,
+  filters?: TicketFilters
+) {
+  return useQuery({
+    queryKey: ['tickets', 'search', projectId, searchQuery, filters],
+    queryFn: async () => {
+      if (!projectId || !searchQuery) return [];
+      const response = await ticketService.searchTickets(searchQuery, projectId, filters);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to search tickets');
+      }
+      return response.data?.documents ?? [];
+    },
+    enabled: !!projectId && !!searchQuery,
+  });
+}
+

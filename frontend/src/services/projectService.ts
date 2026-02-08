@@ -68,7 +68,7 @@ export async function updateProject(
   return executeFunction<Project>(FUNCTIONS_IDS.MANAGE_PROJECT, {
     action: 'update',
     projectId,
-    ...data,
+    data,
   });
 }
 

@@ -54,19 +54,33 @@ export default async function main({ req, res, log, error: logError }) {
   const { databases } = createAdminClient();
 
   try {
-    // Get all project memberships for the user
-    const memberships = await databases.listDocuments(
-      DATABASE_ID,
-      COLLECTIONS.PROJECT_MEMBERS,
-      [Query.equal('userId', userId)]
-    );
+    // Get all project memberships for the user with pagination support
+    const allMemberships = [];
+    let offset = 0;
+    let hasMore = true;
 
-    if (memberships.documents.length === 0) {
+    while (hasMore) {
+      const memberships = await databases.listDocuments(
+        DATABASE_ID,
+        COLLECTIONS.PROJECT_MEMBERS,
+        [Query.equal('userId', userId), Query.limit(500), Query.offset(offset)]
+      );
+
+      if (memberships.documents.length === 0) {
+        hasMore = false;
+      } else {
+        allMemberships.push(...memberships.documents);
+        offset += 500;
+        hasMore = memberships.documents.length === 500;
+      }
+    }
+
+    if (allMemberships.length === 0) {
       return res.json(success({ documents: [], total: 0 }));
     }
 
     // Get project IDs
-    const projectIds = memberships.documents.map((m) => m.projectId);
+    const projectIds = allMemberships.map((m) => m.projectId);
 
     // Get projects
     const projects = await databases.listDocuments(
@@ -81,7 +95,7 @@ export default async function main({ req, res, log, error: logError }) {
 
     // Add user's role to each project
     const projectsWithRole = projects.documents.map((project) => {
-      const membership = memberships.documents.find(
+      const membership = allMemberships.find(
         (m) => m.projectId === project.$id
       );
       return {

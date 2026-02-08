@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Settings,
   User,
@@ -12,6 +12,7 @@ import {
   Monitor,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { account } from '@/lib/appwrite';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { Avatar } from '@/components/common/Avatar';
@@ -42,26 +43,62 @@ export function SettingsPage() {
   const [name, setName] = useState(user?.name || '');
   const [email] = useState(user?.email || '');
 
-  // Notification settings
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [mentionNotifications, setMentionNotifications] = useState(true);
-  const [assignmentNotifications, setAssignmentNotifications] = useState(true);
+  // Notification settings - SET-03: persist to localStorage
+  const [emailNotifications, setEmailNotifications] = useState(() => {
+    const saved = localStorage.getItem('notif_email');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [pushNotifications, setPushNotifications] = useState(() => {
+    const saved = localStorage.getItem('notif_push');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [mentionNotifications, setMentionNotifications] = useState(() => {
+    const saved = localStorage.getItem('notif_mention');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [assignmentNotifications, setAssignmentNotifications] = useState(() => {
+    const saved = localStorage.getItem('notif_assignment');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
 
-  // Appearance settings
-  const [theme, setTheme] = useState<ThemeMode>('dark');
+  // Appearance settings - SET-04: persist theme to localStorage
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    return (localStorage.getItem('theme') as ThemeMode) || 'dark';
+  });
 
+  // SET-04: Apply theme to document when it changes
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    document.documentElement.setAttribute('data-theme', theme === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme);
+  }, [theme]);
+
+  // SET-01: Implement actual profile save via Appwrite
   const handleSaveProfile = async () => {
+    if (!name.trim()) {
+      toast.error('Name cannot be empty');
+      return;
+    }
     setIsSaving(true);
     try {
-      // TODO: Implement profile update via Appwrite
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await account.updateName(name.trim());
       toast.success('Profile updated successfully');
-    } catch {
-      toast.error('Failed to update profile');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update profile';
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // SET-03: Save notification preferences to localStorage
+  const handleSaveNotifications = () => {
+    localStorage.setItem('notif_email', JSON.stringify(emailNotifications));
+    localStorage.setItem('notif_push', JSON.stringify(pushNotifications));
+    localStorage.setItem('notif_mention', JSON.stringify(mentionNotifications));
+    localStorage.setItem('notif_assignment', JSON.stringify(assignmentNotifications));
+    toast.success('Notification preferences saved');
   };
 
   const handleLogout = async () => {
@@ -155,7 +192,7 @@ export function SettingsPage() {
 
             <div className="border-t border-[--color-border-primary] pt-6">
               <Button
-                onClick={() => toast.success('Notification settings saved')}
+                onClick={handleSaveNotifications}
                 leftIcon={<Save className="h-4 w-4" />}
               >
                 Save Preferences
@@ -230,86 +267,7 @@ export function SettingsPage() {
         );
 
       case 'security':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
-                Password
-              </h3>
-              <div className="space-y-4 max-w-md">
-                <Input
-                  label="Current Password"
-                  type="password"
-                  placeholder="Enter current password"
-                />
-                <Input
-                  label="New Password"
-                  type="password"
-                  placeholder="Enter new password"
-                />
-                <Input
-                  label="Confirm New Password"
-                  type="password"
-                  placeholder="Confirm new password"
-                />
-                <Button
-                  onClick={() => toast('Password change coming soon')}
-                  leftIcon={<Shield className="h-4 w-4" />}
-                >
-                  Update Password
-                </Button>
-              </div>
-            </div>
-
-            <div className="border-t border-[--color-border-primary] pt-6">
-              <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
-                Sessions
-              </h3>
-              <div className="p-4 rounded-lg bg-[--color-bg-tertiary]">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-[--color-text-primary]">Current Session</p>
-                    <p className="text-sm text-[--color-text-muted]">
-                      {navigator.userAgent.includes('Chrome') ? 'Chrome' : 
-                       navigator.userAgent.includes('Firefox') ? 'Firefox' :
-                       navigator.userAgent.includes('Safari') ? 'Safari' : 'Browser'} on {
-                       navigator.userAgent.includes('Windows') ? 'Windows' :
-                       navigator.userAgent.includes('Mac') ? 'macOS' :
-                       navigator.userAgent.includes('Linux') ? 'Linux' : 'Unknown OS'}
-                    </p>
-                  </div>
-                  <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
-                    Active
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-[--color-border-primary] pt-6">
-              <h3 className="text-lg font-semibold text-red-400 mb-4">
-                Danger Zone
-              </h3>
-              <div className="p-4 rounded-lg border border-red-500/30 bg-red-500/5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-[--color-text-primary]">Log Out</p>
-                    <p className="text-sm text-[--color-text-muted]">
-                      Sign out of your account on this device
-                    </p>
-                  </div>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={handleLogout}
-                    leftIcon={<LogOut className="h-4 w-4" />}
-                  >
-                    Log Out
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+        return <SecurityTab onLogout={handleLogout} />;
     }
   };
 
@@ -428,5 +386,133 @@ function ThemeOption({ mode, label, icon, selected, onSelect }: ThemeOptionProps
         </span>
       </div>
     </button>
+  );
+}
+
+// SET-02: Security Tab with actual password change
+function SecurityTab({ onLogout }: { onLogout: () => void }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChanging, setIsChanging] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Please fill in all password fields');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    setIsChanging(true);
+    try {
+      await account.updatePassword(newPassword, currentPassword);
+      toast.success('Password updated successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update password';
+      if (message.includes('Invalid credentials') || message.includes('password')) {
+        toast.error('Current password is incorrect');
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setIsChanging(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+          Password
+        </h3>
+        <div className="space-y-4 max-w-md">
+          <Input
+            label="Current Password"
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            placeholder="Enter current password"
+          />
+          <Input
+            label="New Password"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+          />
+          <Input
+            label="Confirm New Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+          />
+          <Button
+            onClick={handleChangePassword}
+            isLoading={isChanging}
+            leftIcon={<Shield className="h-4 w-4" />}
+          >
+            Update Password
+          </Button>
+        </div>
+      </div>
+
+      <div className="border-t border-[--color-border-primary] pt-6">
+        <h3 className="text-lg font-semibold text-[--color-text-primary] mb-4">
+          Sessions
+        </h3>
+        <div className="p-4 rounded-lg bg-[--color-bg-tertiary]">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-[--color-text-primary]">Current Session</p>
+              <p className="text-sm text-[--color-text-muted]">
+                {navigator.userAgent.includes('Chrome') ? 'Chrome' : 
+                 navigator.userAgent.includes('Firefox') ? 'Firefox' :
+                 navigator.userAgent.includes('Safari') ? 'Safari' : 'Browser'} on {
+                 navigator.userAgent.includes('Windows') ? 'Windows' :
+                 navigator.userAgent.includes('Mac') ? 'macOS' :
+                 navigator.userAgent.includes('Linux') ? 'Linux' : 'Unknown OS'}
+              </p>
+            </div>
+            <span className="text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">
+              Active
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-[--color-border-primary] pt-6">
+        <h3 className="text-lg font-semibold text-red-400 mb-4">
+          Danger Zone
+        </h3>
+        <div className="p-4 rounded-lg border border-red-500/30 bg-red-500/5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-[--color-text-primary]">Log Out</p>
+              <p className="text-sm text-[--color-text-muted]">
+                Sign out of your account on this device
+              </p>
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={onLogout}
+              leftIcon={<LogOut className="h-4 w-4" />}
+            >
+              Log Out
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

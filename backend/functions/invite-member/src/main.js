@@ -111,13 +111,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -138,8 +138,7 @@ function sanitizeForJson(obj) {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;')
-      .replace(/\//g, '&#x2F;');
+      .replace(/'/g, '&#x27;');
   };
 
   if (typeof obj === 'string') return sanitizeString(obj);
@@ -196,6 +195,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const { projectId, email, role } = body;
 
   if (!projectId) {
@@ -251,6 +253,11 @@ export default async function main({ req, res, log, error: logError }) {
 
     if (!inviteeId) {
       return res.json(error('User not found. They must register first.', 404));
+    }
+
+    // TEAM-02: Check for self-invite BEFORE the membership lookup
+    if (inviteeId === userId) {
+      return res.json(error('You cannot invite yourself to the project', 400));
     }
 
     // Check if already a member

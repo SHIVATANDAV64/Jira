@@ -19,6 +19,7 @@ export interface Project {
   status: ProjectStatus;
   $createdAt: string;
   $updatedAt: string;
+  userRole?: ProjectRole;
 }
 
 export type ProjectStatus = 'active' | 'archived';
@@ -51,6 +52,8 @@ export interface Ticket {
   labels: string[];
   dueDate?: string;
   order: number;
+  ticketKey?: string;
+  sprintId?: string;
   attachments?: string[];
   reporter?: User;
   assignee?: User;
@@ -84,7 +87,7 @@ export interface ActivityLog {
   ticketId?: string;
   userId: string;
   action: ActivityAction;
-  details: Record<string, unknown>;
+  details: string | Record<string, unknown>;
   user?: User;
   $createdAt: string;
 }
@@ -101,7 +104,11 @@ export type ActivityAction =
   | 'member_removed'
   | 'member_role_changed'
   | 'project_created'
-  | 'project_updated';
+  | 'project_updated'
+  | 'sprint_created'
+  | 'sprint_started'
+  | 'sprint_completed'
+  | 'sprint_deleted';
 
 // Kanban types
 export interface KanbanColumn {
@@ -133,13 +140,16 @@ export interface CreateTicketForm {
   description: string;
   type: TicketType;
   priority: TicketPriority;
+  status?: TicketStatus;
   assigneeId?: string;
   labels?: string[];
   dueDate?: string;
+  attachments?: string[];
 }
 
 export interface UpdateTicketForm extends Partial<CreateTicketForm> {
-  status?: TicketStatus;
+  // Note: status changes go through moveTicket(), not updateTicket()
+  // Assignee changes go through assignTicket(), not updateTicket()
 }
 
 // API Response types
@@ -205,6 +215,7 @@ export interface UpdateSprintForm extends Partial<CreateSprintForm> {
 export interface Notification {
   $id: string;
   userId: string;
+  projectId?: string;
   type: NotificationType;
   title: string;
   message: string;
@@ -252,7 +263,7 @@ export const ROLE_PERMISSIONS: Record<ProjectRole, RolePermissions> = {
     canCreateTickets: true,
     canEditTickets: true,
     canDeleteTickets: false,
-    canAssignTickets: false,
+    canAssignTickets: true,
     canMoveTickets: true,
     canManageMembers: false,
     canEditProject: false,

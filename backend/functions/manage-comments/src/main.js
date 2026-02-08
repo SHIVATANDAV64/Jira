@@ -13,6 +13,7 @@ const COLLECTIONS = {
   TICKETS: process.env.APPWRITE_COLLECTION_TICKETS,
   COMMENTS: process.env.APPWRITE_COLLECTION_COMMENTS,
   ACTIVITY_LOG: process.env.APPWRITE_COLLECTION_ACTIVITY_LOGS,
+  NOTIFICATIONS: process.env.APPWRITE_COLLECTION_NOTIFICATIONS,
 };
 
 const PROJECT_ROLES = {
@@ -92,8 +93,7 @@ function sanitizeString(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/'/g, '&#x27;');
 }
 
 function sanitizeForJson(obj) {
@@ -136,13 +136,13 @@ function parseBody(req) {
     if (typeof req.body === 'string') {
       // Prevent excessively large payloads (max 1MB)
       if (req.body.length > 1024 * 1024) {
-        return {};
+        return { _parseError: true };
       }
       return JSON.parse(req.body);
     }
     return req.body || {};
   } catch {
-    return {};
+    return { _parseError: true };
   }
 }
 
@@ -215,6 +215,9 @@ export default async function main({ req, res, log, error: logError }) {
   }
 
   const body = parseBody(req);
+  if (body._parseError) {
+    return res.json(error('Invalid request body', 400));
+  }
   const { action, ticketId, commentId, data } = body;
 
   const { databases, users } = createAdminClient();
@@ -295,6 +298,28 @@ export default async function main({ req, res, log, error: logError }) {
           return res.json(error('You do not have permission to comment', 403));
         }
 
+        // Validate parentId if provided (must exist and belong to same ticket)
+        if (data.parentId) {
+          if (typeof data.parentId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(data.parentId)) {
+            return res.json(error('Invalid parent comment ID format'));
+          }
+          try {
+            const parentComment = await databases.getDocument(
+              DATABASE_ID,
+              COLLECTIONS.COMMENTS,
+              data.parentId
+            );
+            if (parentComment.ticketId !== ticketId) {
+              return res.json(error('Parent comment does not belong to the same ticket'));
+            }
+          } catch (e) {
+            return res.json(error('Parent comment not found', 404));
+          }
+        }
+
+        // Sanitize comment content
+        const sanitizedContent = sanitizeString(data.content);
+
         const comment = await databases.createDocument(
           DATABASE_ID,
           COLLECTIONS.COMMENTS,
@@ -302,7 +327,7 @@ export default async function main({ req, res, log, error: logError }) {
           {
             ticketId,
             userId,
-            content: data.content,
+            content: sanitizedContent,
             parentId: data.parentId || null,
           }
         );
@@ -320,6 +345,42 @@ export default async function main({ req, res, log, error: logError }) {
             details: JSON.stringify(sanitizeForJson({ commentId: comment.$id })),
           }
         );
+
+        // Create notifications for relevant users
+        try {
+          const notifTicket = await databases.getDocument(DATABASE_ID, COLLECTIONS.TICKETS, data.ticketId || ticketId);
+          const notifyUsers = new Set();
+          
+          // Notify ticket reporter
+          if (notifTicket.reporterId && notifTicket.reporterId !== userId) {
+            notifyUsers.add(notifTicket.reporterId);
+          }
+          // Notify ticket assignee
+          if (notifTicket.assigneeId && notifTicket.assigneeId !== userId) {
+            notifyUsers.add(notifTicket.assigneeId);
+          }
+          // If this is a reply, notify the parent comment author
+          if (data.parentId) {
+            const parentComment = await databases.getDocument(DATABASE_ID, COLLECTIONS.COMMENTS, data.parentId);
+            if (parentComment.userId && parentComment.userId !== userId) {
+              notifyUsers.add(parentComment.userId);
+            }
+          }
+
+          for (const notifyUserId of notifyUsers) {
+            await databases.createDocument(DATABASE_ID, COLLECTIONS.NOTIFICATIONS, 'unique()', {
+              userId: notifyUserId,
+              projectId: data.projectId || notifTicket.projectId,
+              type: data.parentId ? 'comment_reply' : 'comment_added',
+              title: data.parentId ? 'New Reply' : 'New Comment',
+              message: `New ${data.parentId ? 'reply' : 'comment'} on ticket: ${notifTicket.title}`,
+              read: false,
+              actionUrl: `/projects/${notifTicket.projectId}/tickets/${data.ticketId || ticketId}`,
+            });
+          }
+        } catch (notifError) {
+          log('Failed to create comment notification: ' + notifError.message);
+        }
 
         // Get user info
         let user = null;
@@ -361,11 +422,16 @@ export default async function main({ req, res, log, error: logError }) {
           return res.json(error('You can only edit your own comments', 403));
         }
 
+        // Sanitize comment content
+        const sanitizedUpdateContent = sanitizeString(data.content);
+
+        // CMT-06: Track edited status via comparison of $createdAt and $updatedAt on frontend
+        // The edited field should be tracked by comparing document timestamps
         const updated = await databases.updateDocument(
           DATABASE_ID,
           COLLECTIONS.COMMENTS,
           commentId,
-          { content: data.content }
+          { content: sanitizedUpdateContent }
         );
 
         log(`Comment ${commentId} updated by user ${userId}`);
@@ -401,7 +467,30 @@ export default async function main({ req, res, log, error: logError }) {
           return res.json(error('You do not have permission to delete this comment', 403));
         }
 
-        await databases.deleteDocument(DATABASE_ID, COLLECTIONS.COMMENTS, commentId);
+        // CMT-02: Delete all nested child replies recursively
+        async function deleteCommentAndReplies(commentToDelete) {
+          // Find all direct replies to this comment
+          let replyOffset = 0;
+          while (true) {
+            const replies = await databases.listDocuments(
+              DATABASE_ID, COLLECTIONS.COMMENTS,
+              [Query.equal('parentId', commentToDelete.$id), Query.limit(100), Query.offset(replyOffset)]
+            );
+            if (replies.documents.length === 0) break;
+            for (const reply of replies.documents) {
+              // Recursively delete this reply and its children
+              await deleteCommentAndReplies(reply);
+            }
+            if (replies.documents.length < 100) break;
+            // Reset offset as we're not paginating across deletions
+            replyOffset = 0;
+          }
+          // Now delete the comment itself
+          await databases.deleteDocument(DATABASE_ID, COLLECTIONS.COMMENTS, commentToDelete.$id);
+        }
+
+        // Delete the parent comment and all its nested replies
+        await deleteCommentAndReplies(comment);
 
         await databases.createDocument(
           DATABASE_ID,

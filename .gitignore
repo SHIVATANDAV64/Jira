@@ -12,6 +12,7 @@ node_modules/
 dist/
 dist-node/
 *.log
+.github
 
 # IDE and editor
 .vscode/

@@ -5,6 +5,7 @@ export {
   useCreateProject,
   useUpdateProject,
   useArchiveProject,
+  useRestoreProject,
   useDeleteProject,
   projectKeys,
 } from './useProjects';
@@ -74,3 +75,8 @@ export {
   getNotificationIcon,
   notificationKeys,
 } from './useNotifications';
+
+// Permission hooks
+export {
+  usePermissions,
+} from './usePermissions';

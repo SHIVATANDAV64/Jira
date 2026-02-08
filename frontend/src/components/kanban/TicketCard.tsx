@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { MessageSquare, Paperclip, Calendar } from 'lucide-react';
+import { Paperclip, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { PriorityBadge, TypeBadge } from '@/components/common/Badge';
 import { Avatar } from '@/components/common/Avatar';
@@ -91,12 +91,6 @@ export function TicketCard({ ticket, projectKey, isDragging }: TicketCardProps) 
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Comment count placeholder */}
-          <span className="flex items-center gap-1 text-xs text-[--color-text-muted]">
-            <MessageSquare className="h-3 w-3" />
-            0
-          </span>
-
           {/* Attachments placeholder */}
           {ticket.attachments && ticket.attachments.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-[--color-text-muted]">

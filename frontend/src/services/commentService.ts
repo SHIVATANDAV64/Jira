@@ -1,6 +1,7 @@
-import { functions, FUNCTIONS_IDS } from '@/lib/appwrite';
+import { functions, FUNCTIONS_IDS, account } from '@/lib/appwrite';
 import type { Comment, ApiResponse, PaginatedResponse } from '@/types';
 import { ExecutionMethod } from 'appwrite';
+import * as notificationService from './notificationService';
 
 /**
  * Execute an Appwrite function and parse the response
@@ -43,13 +44,20 @@ export async function getComments(
 
 /**
  * Create a new comment
+ * NTF-01c: Optionally creates notifications for ticket reporter when given ticket context
  */
 export async function createComment(
   ticketId: string,
   content: string,
-  parentId?: string
+  parentId?: string,
+  ticketContext?: {
+    reporterId: string;
+    projectId: string;
+    ticketKey: string;
+    ticketTitle: string;
+  }
 ): Promise<ApiResponse<Comment>> {
-  return executeFunction<Comment>(FUNCTIONS_IDS.MANAGE_COMMENTS, {
+  const result = await executeFunction<Comment>(FUNCTIONS_IDS.MANAGE_COMMENTS, {
     action: 'create',
     ticketId,
     data: {
@@ -57,6 +65,27 @@ export async function createComment(
       parentId,
     },
   });
+
+  // NTF-01c: Notify ticket reporter about the comment (but not if they're the commenter)
+  if (result.success && result.data && ticketContext) {
+    try {
+      const currentUser = await account.get();
+      if (ticketContext.reporterId !== currentUser.$id) {
+        await notificationService.notifyCommentAdded(
+          ticketContext.reporterId,
+          ticketContext.projectId,
+          ticketContext.ticketKey,
+          currentUser.name,
+          ticketId
+        );
+      }
+    } catch (error) {
+      console.error('Error creating comment notification:', error);
+      // Don't fail the comment creation if notification fails
+    }
+  }
+
+  return result;
 }
 
 /**

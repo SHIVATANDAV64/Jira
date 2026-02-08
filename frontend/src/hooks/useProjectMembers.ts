@@ -29,30 +29,20 @@ export function useProjectMembers(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
-  // Realtime subscription
+  // Realtime subscription — invalidate to refetch through authorized endpoints
   useEffect(() => {
     if (!projectId) return;
 
     const unsubscribe = client.subscribe(
       `databases.${DATABASE_ID}.collections.${COLLECTIONS.PROJECT_MEMBERS}.documents`,
       (response) => {
-        const { events, payload } = response as { events: string[]; payload: ProjectMember };
-        const eventType = events[0] || '';
+        const { payload } = response as { payload: ProjectMember };
         const document = payload;
 
         // Only process events for this project
         if (document.projectId !== projectId) return;
 
-        queryClient.setQueryData<ProjectMember[]>(memberKeys.list(projectId), (old = []) => {
-          if (eventType.includes('create')) {
-            return [...old, document];
-          } else if (eventType.includes('update')) {
-            return old.map((m) => (m.$id === document.$id ? document : m));
-          } else if (eventType.includes('delete')) {
-            return old.filter((m) => m.$id !== document.$id);
-          }
-          return old;
-        });
+        queryClient.invalidateQueries({ queryKey: memberKeys.list(projectId) });
       }
     );
 

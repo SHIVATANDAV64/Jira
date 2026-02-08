@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import {
   Plus,
@@ -18,14 +18,17 @@ import { Modal } from '@/components/common/Modal';
 import { Input } from '@/components/common/Input';
 import { Textarea } from '@/components/common/Textarea';
 import { Badge } from '@/components/common/Badge';
-import type { Sprint, CreateSprintForm, Ticket } from '@/types';
+import type { Sprint, CreateSprintForm, UpdateSprintForm, Ticket } from '@/types';
 import {
   useSprints,
   useCreateSprint,
   useStartSprint,
   useCompleteSprint,
   useDeleteSprint,
+  useUpdateSprint,
 } from '@/hooks/useSprints';
+import { useProjectMembers } from '@/hooks/useProjectMembers';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface SprintBoardProps {
   projectId: string;
@@ -35,8 +38,15 @@ interface SprintBoardProps {
 
 export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardProps) {
   const { sprints, isLoading } = useSprints(projectId);
+  const { members } = useProjectMembers(projectId);
+  const { permissions } = usePermissions(members);
+  const deleteSprintMutation = useDeleteSprint();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [expandedSprints, setExpandedSprints] = useState<Set<string>>(new Set());
+  const [showMoreCompleted, setShowMoreCompleted] = useState(false);
 
   const toggleSprintExpanded = (sprintId: string) => {
     setExpandedSprints((prev) => {
@@ -73,13 +83,15 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
         <h2 className="text-xl font-semibold text-[--color-text-primary]">
           Sprints & Backlog
         </h2>
-        <Button
-          size="sm"
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={() => setShowCreateModal(true)}
-        >
-          Create Sprint
-        </Button>
+        {permissions.canEditProject && (
+          <Button
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setShowCreateModal(true)}
+          >
+            Create Sprint
+          </Button>
+        )}
       </div>
 
       {/* Active Sprint */}
@@ -90,6 +102,15 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
           isExpanded={expandedSprints.has(activeSprint.$id)}
           onToggle={() => toggleSprintExpanded(activeSprint.$id)}
           onTicketClick={onTicketClick}
+          onEdit={() => {
+            setEditingSprint(activeSprint);
+            setShowEditModal(true);
+          }}
+          onDelete={() => {
+            setEditingSprint(activeSprint);
+            setShowDeleteConfirm(true);
+          }}
+          canManage={permissions.canEditProject}
         />
       )}
 
@@ -107,6 +128,15 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
               isExpanded={expandedSprints.has(sprint.$id)}
               onToggle={() => toggleSprintExpanded(sprint.$id)}
               onTicketClick={onTicketClick}
+              onEdit={() => {
+                setEditingSprint(sprint);
+                setShowEditModal(true);
+              }}
+              onDelete={() => {
+                setEditingSprint(sprint);
+                setShowDeleteConfirm(true);
+              }}
+              canManage={permissions.canEditProject}
             />
           ))}
         </div>
@@ -145,7 +175,7 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
           <h3 className="text-sm font-medium text-[--color-text-secondary]">
             Completed Sprints
           </h3>
-          {completedSprints.slice(0, 3).map((sprint) => (
+          {completedSprints.slice(0, showMoreCompleted ? undefined : 3).map((sprint) => (
             <SprintCard
               key={sprint.$id}
               sprint={sprint}
@@ -153,9 +183,28 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
               isExpanded={expandedSprints.has(sprint.$id)}
               onToggle={() => toggleSprintExpanded(sprint.$id)}
               onTicketClick={onTicketClick}
+              onEdit={() => {
+                setEditingSprint(sprint);
+                setShowEditModal(true);
+              }}
+              onDelete={() => {
+                setEditingSprint(sprint);
+                setShowDeleteConfirm(true);
+              }}
               isCompleted
+              canManage={permissions.canEditProject}
             />
           ))}
+          {completedSprints.length > 3 && !showMoreCompleted && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowMoreCompleted(true)}
+              className="w-full cursor-pointer"
+            >
+              Show more ({completedSprints.length - 3} more)
+            </Button>
+          )}
         </div>
       )}
 
@@ -165,6 +214,67 @@ export function SprintBoard({ projectId, tickets, onTicketClick }: SprintBoardPr
         onClose={() => setShowCreateModal(false)}
         projectId={projectId}
       />
+
+      {/* Edit Sprint Modal */}
+      {editingSprint && (
+        <EditSprintModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingSprint(null);
+          }}
+          projectId={projectId}
+          sprint={editingSprint}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setEditingSprint(null);
+        }}
+        title="Delete Sprint"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-[--color-text-secondary]">
+            Are you sure you want to delete this sprint? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setEditingSprint(null);
+              }}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (editingSprint) {
+                  deleteSprintMutation.mutate(
+                    { sprintId: editingSprint.$id, projectId },
+                    {
+                      onSuccess: () => {
+                        setShowDeleteConfirm(false);
+                        setEditingSprint(null);
+                      },
+                    }
+                  );
+                }
+              }}
+              className="cursor-pointer bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -177,6 +287,7 @@ interface SprintCardProps {
   onToggle: () => void;
   onTicketClick?: (ticketId: string) => void;
   isCompleted?: boolean;
+  canManage?: boolean;
 }
 
 function SprintCard({
@@ -186,10 +297,12 @@ function SprintCard({
   onToggle,
   onTicketClick,
   isCompleted,
-}: SprintCardProps) {
+  canManage = false,
+  onEdit,
+  onDelete,
+}: SprintCardProps & { onEdit?: () => void; onDelete?: () => void }) {
   const startSprintMutation = useStartSprint();
   const completeSprintMutation = useCompleteSprint();
-  const deleteSprintMutation = useDeleteSprint();
   const [showMenu, setShowMenu] = useState(false);
 
   const daysRemaining = differenceInDays(new Date(sprint.endDate), new Date());
@@ -244,18 +357,18 @@ function SprintCard({
         </div>
 
         <div className="flex items-center gap-2">
-          {isPlanning && (
+          {isPlanning && canManage && (
             <Button
               size="sm"
               variant="secondary"
               leftIcon={<Play className="h-4 w-4" />}
-              onClick={() => startSprintMutation.mutate(sprint.$id)}
+              onClick={() => startSprintMutation.mutate({ sprintId: sprint.$id, projectId: sprint.projectId })}
               disabled={startSprintMutation.isPending}
             >
               Start Sprint
             </Button>
           )}
-          {isActive && (
+          {isActive && canManage && (
             <Button
               size="sm"
               variant="secondary"
@@ -266,7 +379,7 @@ function SprintCard({
               Complete Sprint
             </Button>
           )}
-          <div className="relative">
+          {canManage && <div className="relative">
             <Button
               size="sm"
               variant="ghost"
@@ -285,7 +398,7 @@ function SprintCard({
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[--color-text-primary] hover:bg-[--color-bg-hover]"
                     onClick={() => {
                       setShowMenu(false);
-                      // TODO: Open edit modal
+                      onEdit?.();
                     }}
                   >
                     <Edit className="h-4 w-4" />
@@ -295,7 +408,7 @@ function SprintCard({
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-[--color-bg-hover]"
                     onClick={() => {
                       setShowMenu(false);
-                      deleteSprintMutation.mutate(sprint.$id);
+                      onDelete?.();
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -304,7 +417,7 @@ function SprintCard({
                 </div>
               </>
             )}
-          </div>
+          </div>}
         </div>
       </div>
 
@@ -400,8 +513,45 @@ function CreateSprintModal({ isOpen, onClose, projectId }: CreateSprintModalProp
     endDate: format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // SPR-06: Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: '',
+        goal: '',
+        startDate: format(new Date(), 'yyyy-MM-dd'),
+        endDate: format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+      });
+      setErrors({});
+    }
+  }, [isOpen]);
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim() || formData.name.trim().length < 3) {
+      newErrors.name = 'Sprint name must be at least 3 characters';
+    } else if (formData.name.trim().length > 100) {
+      newErrors.name = 'Sprint name must be 100 characters or less';
+    }
+
+    if (formData.startDate && formData.endDate && formData.endDate <= formData.startDate) {
+      newErrors.endDate = 'End date must be after start date';
+    }
+
+    if (formData.goal && formData.goal.length > 500) {
+      newErrors.goal = 'Sprint goal must be 500 characters or less';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
     createSprintMutation.mutate(formData, {
       onSuccess: () => {
         onClose();
@@ -411,6 +561,7 @@ function CreateSprintModal({ isOpen, onClose, projectId }: CreateSprintModalProp
           startDate: format(new Date(), 'yyyy-MM-dd'),
           endDate: format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
         });
+        setErrors({});
       },
     });
   };
@@ -423,6 +574,7 @@ function CreateSprintModal({ isOpen, onClose, projectId }: CreateSprintModalProp
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           placeholder="e.g., Sprint 1"
+          error={errors.name}
           required
         />
 
@@ -432,6 +584,7 @@ function CreateSprintModal({ isOpen, onClose, projectId }: CreateSprintModalProp
           onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
           placeholder="What do you want to achieve in this sprint?"
           rows={3}
+          error={errors.goal}
         />
 
         <div className="grid grid-cols-2 gap-4">
@@ -447,6 +600,7 @@ function CreateSprintModal({ isOpen, onClose, projectId }: CreateSprintModalProp
             label="End Date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            error={errors.endDate}
             required
           />
         </div>
@@ -457,6 +611,125 @@ function CreateSprintModal({ isOpen, onClose, projectId }: CreateSprintModalProp
           </Button>
           <Button type="submit" disabled={createSprintMutation.isPending}>
             {createSprintMutation.isPending ? 'Creating...' : 'Create Sprint'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// Edit Sprint Modal
+interface EditSprintModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId: string;
+  sprint: Sprint;
+}
+
+function EditSprintModal({ isOpen, onClose, sprint }: EditSprintModalProps) {
+  const updateSprintMutation = useUpdateSprint();
+  const [formData, setFormData] = useState<UpdateSprintForm>({
+    name: sprint.name,
+    goal: sprint.goal || '',
+    startDate: sprint.startDate,
+    endDate: sprint.endDate,
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: sprint.name,
+        goal: sprint.goal || '',
+        startDate: sprint.startDate,
+        endDate: sprint.endDate,
+      });
+      setErrors({});
+    }
+  }, [isOpen, sprint]);
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name?.trim() || formData.name.trim().length < 3) {
+      newErrors.name = 'Sprint name must be at least 3 characters';
+    } else if (formData.name!.trim().length > 100) {
+      newErrors.name = 'Sprint name must be 100 characters or less';
+    }
+
+    if (formData.startDate && formData.endDate && formData.endDate <= formData.startDate) {
+      newErrors.endDate = 'End date must be after start date';
+    }
+
+    if (formData.goal && formData.goal.length > 500) {
+      newErrors.goal = 'Sprint goal must be 500 characters or less';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    updateSprintMutation.mutate(
+      { sprintId: sprint.$id, data: formData },
+      {
+        onSuccess: () => {
+          onClose();
+          setErrors({});
+        },
+      }
+    );
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Sprint">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Sprint Name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="e.g., Sprint 1"
+          error={errors.name}
+          required
+        />
+
+        <Textarea
+          label="Sprint Goal (optional)"
+          value={formData.goal || ''}
+          onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
+          placeholder="What do you want to achieve in this sprint?"
+          rows={3}
+          error={errors.goal}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            type="date"
+            label="Start Date"
+            value={formData.startDate}
+            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+            required
+          />
+          <Input
+            type="date"
+            label="End Date"
+            value={formData.endDate}
+            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            error={errors.endDate}
+            required
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={updateSprintMutation.isPending}>
+            {updateSprintMutation.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </form>
