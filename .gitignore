@@ -1,5 +1,3 @@
-temp
-.opencode
 nul*
 dist-node
 # Environment variables (local configurations)
@@ -16,6 +14,8 @@ dist-node/
 
 # IDE and editor
 .vscode/
+temp
+.opencode
 .idea/
 *.swp
 *.swo

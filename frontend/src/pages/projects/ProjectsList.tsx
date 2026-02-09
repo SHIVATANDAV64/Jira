@@ -1,21 +1,31 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, FolderKanban, Search, MoreVertical, Archive, Trash2, AlertCircle, Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, FolderKanban, Search, MoreVertical, Archive, Trash2, AlertCircle, Loader2, Settings, KanbanSquare, ListTodo } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';
 import { Modal } from '@/components/common/Modal';
-import { useProjects, useArchiveProject, useRestoreProject, useDeleteProject, usePermissions } from '@/hooks';
+import { useProjects, useArchiveProject, useRestoreProject, useDeleteProject } from '@/hooks';
+import { useAuth } from '@/context/AuthContext';
 
 export function ProjectsList() {
   const { projects, isLoading, error } = useProjects();
   const archiveMutation = useArchiveProject();
   const restoreMutation = useRestoreProject();
   const deleteMutation = useDeleteProject();
-  const { permissions } = usePermissions([]);
+  const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Check if user can manage a project (owner or has userRole admin/manager)
+  const canManageProject = (project: typeof projects[0]) => {
+    if (!user) return false;
+    if (project.ownerId === user.$id) return true;
+    if (project.userRole === 'admin' || project.userRole === 'manager') return true;
+    return false;
+  };
 
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,6 +154,7 @@ export function ProjectsList() {
                   className="cursor-pointer rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]"
                   onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     setOpenMenuId(openMenuId === project.$id ? null : project.$id);
                   }}
                 >
@@ -151,21 +162,71 @@ export function ProjectsList() {
                 </button>
 
                 {openMenuId === project.$id && (
-                  <div className="absolute right-0 top-7 z-10 w-40 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] py-1 shadow-lg">
-                    {permissions.canEditProject && (
-                      <button
-                        className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
-                        onClick={() => handleArchive(project.$id, project.status === 'archived')}
-                        disabled={archiveMutation.isPending || restoreMutation.isPending}
-                      >
-                        <Archive className="h-4 w-4" />
-                        {project.status === 'archived' ? 'Restore' : 'Archive'}
-                      </button>
+                  <div className="absolute right-0 top-7 z-10 w-48 rounded-md border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] py-1 shadow-lg">
+                    {/* Always visible options */}
+                    <button
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpenMenuId(null);
+                        navigate(`/projects/${project.$id}`);
+                      }}
+                    >
+                      <KanbanSquare className="h-4 w-4" />
+                      View Board
+                    </button>
+                    <button
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpenMenuId(null);
+                        navigate(`/projects/${project.$id}/backlog`);
+                      }}
+                    >
+                      <ListTodo className="h-4 w-4" />
+                      Backlog & Sprints
+                    </button>
+
+                    {/* Owner/Admin options */}
+                    {canManageProject(project) && (
+                      <>
+                        <div className="my-1 border-t border-[var(--color-border-primary)]" />
+                        <button
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setOpenMenuId(null);
+                            navigate(`/projects/${project.$id}/settings`);
+                          }}
+                        >
+                          <Settings className="h-4 w-4" />
+                          Project Settings
+                        </button>
+                        <button
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleArchive(project.$id, project.status === 'archived');
+                          }}
+                          disabled={archiveMutation.isPending || restoreMutation.isPending}
+                        >
+                          <Archive className="h-4 w-4" />
+                          {project.status === 'archived' ? 'Restore' : 'Archive'}
+                        </button>
+                      </>
                     )}
-                    {permissions.canDeleteProject && (
+                    {(project.ownerId === user?.$id) && (
                       <button
                         className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-[var(--color-bg-hover)] disabled:opacity-50"
-                        onClick={() => setDeleteConfirmId(project.$id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDeleteConfirmId(project.$id);
+                        }}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="h-4 w-4" />

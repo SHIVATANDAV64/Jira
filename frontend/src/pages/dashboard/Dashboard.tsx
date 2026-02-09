@@ -7,16 +7,23 @@ import {
   Plus,
   ArrowRight,
   CheckCircle,
+  Timer,
+  Target,
+  Calendar,
+  AlertTriangle,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/common/Button';
 import { useProjects } from '@/hooks/useProjects';
 import { useRecentActivity } from '@/hooks/useActivity';
 import { ActivityLog } from '@/components/activity/ActivityLog';
-import type { Project } from '@/types';
+import type { Project, Sprint, Ticket } from '@/types';
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import * as ticketService from '@/services/ticketService';
+import * as sprintService from '@/services/sprintService';
+import { differenceInDays, differenceInHours, format } from 'date-fns';
 
 // Skeleton components for loading states
 function ProjectCardSkeleton() {
@@ -147,6 +154,174 @@ function AssignedTicketCard({ ticket, projects }: AssignedTicketCardProps) {
   );
 }
 
+// Sprint Health Card Component
+interface ActiveSprintInfo {
+  sprint: Sprint;
+  project: Project;
+  tickets: Ticket[];
+}
+
+function SprintHealthCard({ sprint, project, tickets }: ActiveSprintInfo) {
+  const now = new Date();
+  const startDate = new Date(sprint.startDate);
+  const endDate = new Date(sprint.endDate);
+  
+  const totalDays = Math.max(differenceInDays(endDate, startDate), 1);
+  const daysElapsed = differenceInDays(now, startDate);
+  const daysRemaining = differenceInDays(endDate, now);
+  const hoursRemaining = differenceInHours(endDate, now);
+  const timeProgress = Math.min(Math.max((daysElapsed / totalDays) * 100, 0), 100);
+  const isOverdue = daysRemaining < 0;
+  
+  // Ticket stats for this sprint - count tickets that belong to this sprint
+  const sprintTickets = tickets.filter(t => t.sprintId === sprint.$id);
+  const totalTickets = sprintTickets.length;
+  const doneTickets = sprintTickets.filter(t => t.status === 'done').length;
+  const inProgressTickets = sprintTickets.filter(t => t.status === 'in_progress' || t.status === 'in_review').length;
+  const todoTickets = sprintTickets.filter(t => t.status === 'todo' || t.status === 'backlog').length;
+  const completionPercent = totalTickets > 0 ? Math.round((doneTickets / totalTickets) * 100) : 0;
+  
+  // Is the sprint at risk? (more than half the time gone, less than half tickets done)
+  const isAtRisk = timeProgress > 50 && completionPercent < (timeProgress * 0.6);
+  
+  // Format the remaining time
+  let timeLabel: string;
+  if (isOverdue) {
+    timeLabel = `${Math.abs(daysRemaining)}d overdue`;
+  } else if (daysRemaining === 0) {
+    timeLabel = hoursRemaining > 0 ? `${hoursRemaining}h left` : 'Ends today';
+  } else if (daysRemaining === 1) {
+    timeLabel = '1 day left';
+  } else {
+    timeLabel = `${daysRemaining} days left`;
+  }
+
+  return (
+    <Link
+      to={`/projects/${project.$id}/backlog`}
+      className="block rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-4 hover:border-[var(--color-border-secondary)] transition-colors"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] font-semibold text-xs shrink-0">
+            {project.key}
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+              {sprint.name}
+            </h3>
+            <p className="text-xs text-[var(--color-text-muted)] truncate">{project.name}</p>
+          </div>
+        </div>
+        <div className={`flex items-center gap-1 text-xs font-medium shrink-0 px-2 py-0.5 rounded-full ${
+          isOverdue
+            ? 'bg-red-100 text-red-700'
+            : isAtRisk
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-green-100 text-green-700'
+        }`}>
+          {isOverdue ? (
+            <AlertTriangle className="h-3 w-3" />
+          ) : isAtRisk ? (
+            <AlertTriangle className="h-3 w-3" />
+          ) : (
+            <Timer className="h-3 w-3" />
+          )}
+          {timeLabel}
+        </div>
+      </div>
+
+      {/* Sprint Goal */}
+      {sprint.goal && (
+        <div className="flex items-start gap-1.5 mb-3 text-xs text-[var(--color-text-secondary)]">
+          <Target className="h-3 w-3 mt-0.5 shrink-0" />
+          <p className="line-clamp-1">{sprint.goal}</p>
+        </div>
+      )}
+
+      {/* Time Progress Bar */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            {format(startDate, 'MMM d')} – {format(endDate, 'MMM d')}
+          </span>
+          <span className="text-[10px] text-[var(--color-text-muted)]">
+            {Math.round(timeProgress)}% elapsed
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full bg-[var(--color-bg-tertiary)] overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              isOverdue ? 'bg-red-500' : isAtRisk ? 'bg-amber-500' : 'bg-blue-500'
+            }`}
+            style={{ width: `${timeProgress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Ticket Completion Progress */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-[var(--color-text-muted)]">
+            Ticket Progress
+          </span>
+          <span className="text-[10px] font-medium text-[var(--color-text-primary)]">
+            {doneTickets}/{totalTickets} done ({completionPercent}%)
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full bg-[var(--color-bg-tertiary)] overflow-hidden">
+          <div
+            className="h-full rounded-full bg-green-500 transition-all"
+            style={{ width: `${completionPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Ticket Status Breakdown */}
+      <div className="flex items-center gap-3 text-[11px]">
+        <div className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-gray-400" />
+          <span className="text-[var(--color-text-muted)]">To Do {todoTickets}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-blue-500" />
+          <span className="text-[var(--color-text-muted)]">In Progress {inProgressTickets}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-green-500" />
+          <span className="text-[var(--color-text-muted)]">Done {doneTickets}</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function SprintSkeleton() {
+  return (
+    <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="skeleton h-8 w-8 rounded" />
+          <div className="space-y-1.5">
+            <div className="skeleton h-4 w-28 rounded" />
+            <div className="skeleton h-3 w-20 rounded" />
+          </div>
+        </div>
+        <div className="skeleton h-5 w-16 rounded-full" />
+      </div>
+      <div className="skeleton h-1.5 w-full rounded-full mb-3" />
+      <div className="skeleton h-1.5 w-full rounded-full mb-3" />
+      <div className="flex gap-3">
+        <div className="skeleton h-3 w-14 rounded" />
+        <div className="skeleton h-3 w-20 rounded" />
+        <div className="skeleton h-3 w-14 rounded" />
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const { user } = useAuth();
   const { projects, isLoading } = useProjects();
@@ -166,6 +341,43 @@ export function Dashboard() {
       enabled: !!project.$id,
     })),
   });
+
+  // Fetch active sprints for each project
+  const sprintQueries = useQueries({
+    queries: projects.map((project) => ({
+      queryKey: ['sprints', 'active', project.$id],
+      queryFn: async () => {
+        const response = await sprintService.getActiveSprint(project.$id);
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to fetch active sprint');
+        }
+        return response.data ?? null;
+      },
+      enabled: !!project.$id,
+    })),
+  });
+
+  // Combine active sprints with their project and ticket data
+  const activeSprints = useMemo(() => {
+    const result: ActiveSprintInfo[] = [];
+    sprintQueries.forEach((query, index) => {
+      if (query.data && projects[index]) {
+        const project = projects[index];
+        const projectTickets = ticketQueries[index]?.data ?? [];
+        result.push({
+          sprint: query.data,
+          project: project!,
+          tickets: projectTickets,
+        });
+      }
+    });
+    // Sort by end date (most urgent first)
+    return result.sort((a, b) => 
+      new Date(a.sprint.endDate).getTime() - new Date(b.sprint.endDate).getTime()
+    );
+  }, [sprintQueries, projects, ticketQueries]);
+
+  const sprintsLoading = sprintQueries.some((q) => q.isLoading);
 
   // Calculate stats from all tickets
   const stats = useMemo(() => {
@@ -246,6 +458,50 @@ export function Dashboard() {
           icon={<CheckCircle className="h-5 w-5" />}
           isLoading={isLoading || stats.ticketsLoading}
         />
+      </div>
+
+      {/* Active Sprints Section */}
+      <div className="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border-primary)]">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-[var(--color-primary-600)]" />
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
+              Active Sprints
+            </h2>
+            {!sprintsLoading && activeSprints.length > 0 && (
+              <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)] px-1.5 py-0.5 rounded-full">
+                {activeSprints.length}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="p-4">
+          {sprintsLoading || isLoading ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SprintSkeleton />
+              <SprintSkeleton />
+            </div>
+          ) : activeSprints.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <Timer className="h-8 w-8 text-[var(--color-text-muted)] mb-2" />
+              <p className="text-sm text-[var(--color-text-secondary)]">No active sprints</p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                Start a sprint from a project's Backlog page
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {activeSprints.map((info) => (
+                <SprintHealthCard
+                  key={info.sprint.$id}
+                  sprint={info.sprint}
+                  project={info.project}
+                  tickets={info.tickets}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Lists */}
