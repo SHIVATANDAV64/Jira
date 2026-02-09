@@ -343,6 +343,9 @@ export default async function main({ req, res, log, error: logError }) {
       ? ticketsInStatus.documents[0].order + 1
       : 0;
 
+    // Generate the ticket key (e.g., "BUG-123")
+    const ticketKey = `${project.key}-${nextTicketNumber}`;
+
     // Create ticket with retry logic for duplicate handling
     let ticket = null;
     for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
@@ -354,6 +357,7 @@ export default async function main({ req, res, log, error: logError }) {
           {
             projectId: body.projectId,
             ticketNumber: nextTicketNumber,
+            ticketKey: ticketKey,
             title: body.title,
             description: body.description || '',
             type: body.type,
@@ -370,21 +374,32 @@ export default async function main({ req, res, log, error: logError }) {
         );
         break;
       } catch (err) {
-        if (attempt < MAX_RETRY - 1 && err.message && err.message.includes('duplicate')) {
-          // Duplicate ticket number - retry with incremented number
-          const existingTickets = await databases.listDocuments(
-            DATABASE_ID,
-            COLLECTIONS.TICKETS,
-            [
-              Query.equal('projectId', body.projectId),
-              Query.orderDesc('ticketNumber'),
-              Query.limit(1),
-            ]
-          );
-          nextTicketNumber = existingTickets.documents.length > 0
-            ? existingTickets.documents[0].ticketNumber + 1
-            : nextTicketNumber + 1;
-          await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+        const errorMsg = err.message || '';
+        const isDuplicateTicketNumber = errorMsg.includes('duplicate');
+        const isDuplicateDocId = errorMsg.includes('already exists') || errorMsg.includes('Document with the requested ID');
+        
+        if (attempt < MAX_RETRY - 1 && (isDuplicateTicketNumber || isDuplicateDocId)) {
+          // Handle both duplicate ticket numbers and document ID conflicts
+          if (isDuplicateTicketNumber) {
+            // Duplicate ticket number - refetch and increment
+            const existingTickets = await databases.listDocuments(
+              DATABASE_ID,
+              COLLECTIONS.TICKETS,
+              [
+                Query.equal('projectId', body.projectId),
+                Query.orderDesc('ticketNumber'),
+                Query.limit(1),
+              ]
+            );
+            nextTicketNumber = existingTickets.documents.length > 0
+              ? existingTickets.documents[0].ticketNumber + 1
+              : nextTicketNumber + 1;
+          }
+          // For duplicate doc ID, just retry with new ID (generateId() will be called again)
+          // Also regenerate ticketKey with updated ticketNumber
+          ticketKey = `${project.key}-${nextTicketNumber}`;
+          // Add exponential backoff
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 100 * (attempt + 1)));
         } else {
           throw err;
         }
@@ -407,16 +422,16 @@ export default async function main({ req, res, log, error: logError }) {
         action: ACTIVITY_ACTIONS.TICKET_CREATED,
         details: JSON.stringify(sanitizeForJson({
           title: body.title,
-          ticketKey: `${project.key}-${nextTicketNumber}`,
+          ticketKey: ticketKey,
         })),
       }
     );
 
-    log(`Ticket created: ${project.key}-${nextTicketNumber} by user ${userId}`);
+    log(`Ticket created: ${ticketKey} by user ${userId}`);
 
     return res.json(success({
       ...ticket,
-      ticketKey: `${project.key}-${nextTicketNumber}`,
+      ticketKey: ticketKey,
     }));
   } catch (err) {
     logError(`Error creating ticket: ${err.message}`);

@@ -38,7 +38,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="flex items-center gap-2">
             <Bug className="h-6 w-6 text-[var(--color-primary-600)]" />
             <span className="text-sm font-bold text-[var(--color-text-primary)] tracking-tight">
-              BugTracker
+              Jerah
             </span>
           </div>
           <button

@@ -77,7 +77,7 @@ export function Login() {
         <div className="mb-6 flex items-center justify-center gap-2">
           <Bug className="h-7 w-7 text-[var(--color-primary-600)]" />
           <span className="text-lg font-bold text-[var(--color-text-primary)]">
-            BugTracker
+            Jerah
           </span>
         </div>
 
@@ -87,7 +87,7 @@ export function Login() {
             Sign in
           </h1>
           <p className="mb-5 text-sm text-[var(--color-text-muted)]">
-            to continue to BugTracker
+            to continue to Jerah
           </p>
 
           {error && (

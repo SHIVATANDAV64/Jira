@@ -62,7 +62,8 @@ export function TicketCard({
     transition,
   };
 
-  const ticketKey = `${projectKey}-${ticket.ticketNumber}`;
+  // Use ticketKey from database, fallback to calculated value for backward compatibility
+  const ticketKey = ticket.ticketKey || `${projectKey}-${ticket.ticketNumber}`;
 
   // Close menu on outside click
   useEffect(() => {
